@@ -12,6 +12,7 @@ Endereço: https://costatony79.github.io/
 | Meu SAEB Digital | https://costatony79.github.io/saeb-digital-1/ |
 | Ritmo de Leitura | https://costatony79.github.io/ritmo-leitura/ (nesta pasta, `ritmo-leitura/`) |
 | Grupos da Turma | https://costatony79.github.io/grupos-da-turma/ |
+| Futebol de Botão | https://costatony79.github.io/futebol-de-botao/ |
 | GrimórioFC | https://grimoriofc.online |
 | Urna Eletrônica | https://github.com/costatony79/urnaeletronica (roda no computador, com Node.js) |
 
