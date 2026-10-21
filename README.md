@@ -13,6 +13,7 @@ Endereço: https://costatony79.github.io/
 | Ritmo de Leitura | https://costatony79.github.io/ritmo-leitura/ (nesta pasta, `ritmo-leitura/`) |
 | Grupos da Turma | https://costatony79.github.io/grupos-da-turma/ |
 | Futebol de Botão | https://costatony79.github.io/futebol-de-botao/ |
+| Roleta do Stop | https://costatony79.github.io/roleta-do-stop/ |
 | GrimórioFC | https://grimoriofc.online |
 | Urna Eletrônica | https://github.com/costatony79/urnaeletronica (roda no computador, com Node.js) |
 
