@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Professor Tony Costa</title>
+<meta name="description" content="Aplicativos web do Professor Tony Santos Costa para a sala de aula: atividades do SAEB, fluência de leitura, grupos e seminários, eleição de líder de turma e o GrimórioFC.">
+<link rel="icon" href="img/logo_professor_tony.png">
+<link rel="stylesheet" href="css/bootstrap.min.css">
+<style>
+  /* Só o que o Bootstrap não tem. */
+  body { background-color: #f8f9fa; }
+  .apresentacao { background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%); }
+  .apresentacao .logo { width: 140px; height: 140px; object-fit: contain; background: #fff; border-radius: 50%; padding: .6rem; }
+  .card-app { transition: transform .15s ease, box-shadow .15s ease; }
+  .card-app:hover { transform: translateY(-3px); box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .12) !important; }
+  .card-app .foto { aspect-ratio: 16 / 10; object-fit: cover; object-position: top; border-bottom: 1px solid rgba(0, 0, 0, .08); }
+  .card-app .capa { aspect-ratio: 16 / 10; display: grid; place-items: center; color: #fff; border-bottom: 1px solid rgba(0, 0, 0, .08); }
+  .capa-grimorio { background: radial-gradient(circle at 30% 30%, #6f42c1, #3d1f75); }
+  .capa-grimorio span { font-size: 2rem; font-weight: 700; letter-spacing: .02em; }
+  .capa-grimorio small { display: block; text-align: center; font-size: .9rem; opacity: .85; }
+  @media (prefers-reduced-motion: reduce) { .card-app { transition: none; } .card-app:hover { transform: none; } }
+</style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-primary">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center gap-2" href="#">
+      <img src="img/logo_professor_tony.png" alt="" width="36" height="36" class="bg-white rounded-circle p-1">
+      Professor Tony Costa
+    </a>
+    <div class="d-flex gap-3">
+      <a class="nav-link text-white px-0" href="#apps">Aplicativos</a>
+      <a class="nav-link text-white px-0" href="#contato">Contato</a>
+    </div>
+  </div>
+</nav>
+
+<header class="apresentacao text-white">
+  <div class="container py-5">
+    <div class="row align-items-center g-4">
+      <div class="col-md-auto text-center">
+        <img src="img/logo_professor_tony.png" alt="Logo Professor Tony Costa" class="logo shadow">
+      </div>
+      <div class="col-md">
+        <h1 class="display-5 fw-bold mb-1">Tony Santos Costa</h1>
+        <p class="fs-5 mb-3" style="opacity:.85">Msc., Esp. · Professor em Boa Vista, Roraima</p>
+        <p class="lead mb-0" style="max-width: 46rem;">
+          Professor multidisciplinar na Escola Municipal Juslany de Souza Flores. Gosto de metodologias ativas,
+          gamificação e recursos digitais em sala de aula. Aqui estão os aplicativos web que criei para as minhas turmas.
+        </p>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="container py-5">
+  <section id="apps">
+    <h2 class="h3 mb-1">Aplicativos</h2>
+    <p class="text-muted mb-4">Todos funcionam no navegador do computador, da lousa digital ou do celular.</p>
+
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+
+      <div class="col">
+        <article class="card h-100 shadow-sm card-app">
+          <img src="img/apps/saeb.jpg" class="card-img-top foto" alt="Página inicial do Meu SAEB Digital" loading="lazy">
+          <div class="card-body">
+            <span class="badge bg-primary mb-2">Avaliação</span>
+            <h3 class="h5 card-title">Meu SAEB Digital</h3>
+            <p class="card-text">Atividades por descritor do SAEB: 15 de Língua Portuguesa e 28 de Matemática, com 10 questões cada e correção na hora.</p>
+          </div>
+          <div class="card-footer bg-white border-0 pt-0 pb-3">
+            <a href="https://costatony79.github.io/saeb-digital-1/" class="btn btn-primary w-100">Abrir</a>
+          </div>
+        </article>
+      </div>
+
+      <div class="col">
+        <article class="card h-100 shadow-sm card-app">
+          <img src="img/apps/ritmo.jpg" class="card-img-top foto" alt="Tela do Ritmo de Leitura" loading="lazy">
+          <div class="card-body">
+            <span class="badge bg-success mb-2">Leitura</span>
+            <h3 class="h5 card-title">Ritmo de Leitura</h3>
+            <p class="card-text">Treino de fluência: o texto aparece aos poucos, na velocidade escolhida, para a turma ler em voz alta. Tem níveis de palavras, frases e textos.</p>
+          </div>
+          <div class="card-footer bg-white border-0 pt-0 pb-3">
+            <a href="ritmo-leitura/" class="btn btn-primary w-100">Abrir</a>
+          </div>
+        </article>
+      </div>
+
+      <div class="col">
+        <article class="card h-100 shadow-sm card-app">
+          <img src="img/apps/grupos.jpg" class="card-img-top foto" alt="Tela do Grupos da Turma" loading="lazy">
+          <div class="card-body">
+            <span class="badge bg-info text-dark mb-2">Organização</span>
+            <h3 class="h5 card-title">Grupos da Turma</h3>
+            <p class="card-text">Calcula quantos alunos ficam em cada grupo, sorteia os grupos a partir da lista de chamada e monta o cronograma de seminários.</p>
+          </div>
+          <div class="card-footer bg-white border-0 pt-0 pb-3">
+            <a href="https://costatony79.github.io/grupos-da-turma/" class="btn btn-primary w-100">Abrir</a>
+          </div>
+        </article>
+      </div>
+
+      <div class="col">
+        <article class="card h-100 shadow-sm card-app">
+          <div class="capa capa-grimorio" role="img" aria-label="GrimórioFC">
+            <div><span>GrimórioFC</span><small>plataforma das turmas</small></div>
+          </div>
+          <div class="card-body">
+            <span class="badge bg-secondary mb-2">Plataforma</span>
+            <h3 class="h5 card-title">GrimórioFC</h3>
+            <p class="card-text">Plataforma online das turmas. Os alunos entram com usuário e senha ou criam a conta com o código da turma.</p>
+          </div>
+          <div class="card-footer bg-white border-0 pt-0 pb-3">
+            <a href="https://grimoriofc.online" class="btn btn-primary w-100">Abrir grimoriofc.online</a>
+          </div>
+        </article>
+      </div>
+
+      <div class="col">
+        <article class="card h-100 shadow-sm card-app">
+          <img src="img/apps/urna.jpg" class="card-img-top foto" alt="Tela de votação da Urna Eletrônica" loading="lazy">
+          <div class="card-body">
+            <span class="badge bg-warning text-dark mb-2">Cidadania</span>
+            <h3 class="h5 card-title">Urna Eletrônica</h3>
+            <p class="card-text">Eleição do líder de turma no estilo da urna de verdade, com voto em branco e nulo e boletim de urna. Cada professor organiza a eleição das suas turmas.</p>
+            <p class="small text-muted mb-0">Roda no computador da escola, com Node.js. O link leva ao código e às instruções.</p>
+          </div>
+          <div class="card-footer bg-white border-0 pt-0 pb-3">
+            <a href="https://github.com/costatony79/urnaeletronica" class="btn btn-outline-primary w-100">Ver no GitHub</a>
+          </div>
+        </article>
+      </div>
+
+    </div>
+  </section>
+
+  <section id="contato" class="mt-5">
+    <div class="card shadow-sm">
+      <div class="card-body p-4 d-md-flex align-items-center justify-content-between gap-4">
+        <div>
+          <h2 class="h4 mb-1">Contato</h2>
+          <p class="text-muted mb-md-0">Dúvidas, sugestões ou quer usar algum aplicativo na sua escola? Escreva para mim.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <a class="btn btn-primary" href="mailto:costatony79@gmail.com">costatony79@gmail.com</a>
+          <a class="btn btn-outline-secondary" href="https://github.com/costatony79">GitHub</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="container pb-4 text-center text-muted small">
+  Professor Tony Santos Costa · Boa Vista, Roraima
+</footer>
+
+</body>
+</html>

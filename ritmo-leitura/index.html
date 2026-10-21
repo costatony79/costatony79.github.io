@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ritmo de Leitura</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Lexend:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+  :root{
+    --bg:#F5F6FB;
+    --surface:#FFFFFF;
+    --surface-2:#ECEEF6;
+    --border:#DBDFEC;
+    --ink:#1B1F2E;
+    --ink-soft:#5B6178;
+    --ink-faint:#8A90A6;
+    --accent:#2B5FE0;
+    --accent-ink:#FFFFFF;
+    --accent-soft:#E4EBFC;
+    --l1:#17A672; --l1-soft:#E1F6EC;
+    --l2:#2B7FE0; --l2-soft:#E3EEFC;
+    --l3:#C8791A; --l3-soft:#FBEEDA;
+    --l4:#D9455A; --l4-soft:#FBE3E7;
+    --l5:#7C4FE0; --l5-soft:#EEE7FC;
+    --shadow:rgba(27,31,46,0.10);
+    color-scheme:light dark;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#10121C; --surface:#191C2A; --surface-2:#212536; --border:#2E3348;
+      --ink:#EEF0F8; --ink-soft:#A7ACC2; --ink-faint:#6E7390;
+      --accent:#6E93FF; --accent-ink:#0B1024; --accent-soft:#223058;
+      --l1:#33D398; --l1-soft:#163627;
+      --l2:#6E93FF; --l2-soft:#1E2A4A;
+      --l3:#F2B84B; --l3-soft:#3A2E17;
+      --l4:#FF6B7E; --l4-soft:#3A1E24;
+      --l5:#A78BFA; --l5-soft:#2E2452;
+      --shadow:rgba(0,0,0,0.45);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#10121C; --surface:#191C2A; --surface-2:#212536; --border:#2E3348;
+    --ink:#EEF0F8; --ink-soft:#A7ACC2; --ink-faint:#6E7390;
+    --accent:#6E93FF; --accent-ink:#0B1024; --accent-soft:#223058;
+    --l1:#33D398; --l1-soft:#163627;
+    --l2:#6E93FF; --l2-soft:#1E2A4A;
+    --l3:#F2B84B; --l3-soft:#3A2E17;
+    --l4:#FF6B7E; --l4-soft:#3A1E24;
+    --l5:#A78BFA; --l5-soft:#2E2452;
+    --shadow:rgba(0,0,0,0.45);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Lexend',system-ui,-apple-system,'Segoe UI',sans-serif;
+    padding-inline:16px;
+    padding-block:20px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:920px;margin:0 auto;display:flex;flex-direction:column;gap:18px;}
+
+  h1,h2,h3{font-family:'Fredoka',system-ui,sans-serif;margin:0;letter-spacing:.2px;}
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:.72rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--ink-faint);
+  }
+
+  header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  header.top h1{font-size:clamp(1.5rem,4vw,2rem);font-weight:700;color:var(--ink);}
+  header.top p{margin:4px 0 0;color:var(--ink-soft);font-size:.95rem;max-width:46ch;}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:20px;
+    padding:20px;
+    box-shadow:0 8px 24px -12px var(--shadow);
+  }
+
+  /* ---- setup screen ---- */
+  .field-label{
+    font-family:'Fredoka',sans-serif;font-weight:600;font-size:.95rem;
+    color:var(--ink);margin-bottom:10px;display:flex;align-items:baseline;gap:8px;
+  }
+  .field-label .hint{font-family:'Lexend',sans-serif;font-weight:400;font-size:.8rem;color:var(--ink-faint);}
+
+  .level-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+  @media (max-width:520px){.level-grid{grid-template-columns:1fr;}}
+  .level-card{
+    text-align:left;border-radius:14px;border:1.5px solid var(--border);
+    background:var(--surface-2);padding:12px 14px;cursor:pointer;
+    display:flex;flex-direction:column;gap:4px;font-family:inherit;color:var(--ink);
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .level-card:hover{border-color:var(--ink-faint);}
+  .level-card .lname{font-family:'Fredoka',sans-serif;font-weight:600;font-size:.92rem;display:flex;align-items:center;gap:8px;}
+  .level-card .ldot{width:10px;height:10px;border-radius:50%;flex:none;}
+  .level-card .lsample{font-size:.82rem;color:var(--ink-soft);line-height:1.35;}
+  .level-card[aria-pressed="true"]{border-color:var(--dot);background:var(--soft);}
+
+  .l1{--dot:var(--l1);--soft:var(--l1-soft);} .l2{--dot:var(--l2);--soft:var(--l2-soft);}
+  .l3{--dot:var(--l3);--soft:var(--l3-soft);} .l4{--dot:var(--l4);--soft:var(--l4-soft);}
+  .l5{--dot:var(--l5);--soft:var(--l5-soft);}
+  .level-card.l1[aria-pressed="true"]{border-color:var(--l1);background:var(--l1-soft);}
+  .level-card.l2[aria-pressed="true"]{border-color:var(--l2);background:var(--l2-soft);}
+  .level-card.l3[aria-pressed="true"]{border-color:var(--l3);background:var(--l3-soft);}
+  .level-card.l4[aria-pressed="true"]{border-color:var(--l4);background:var(--l4-soft);}
+  .level-card.l5[aria-pressed="true"]{border-color:var(--l5);background:var(--l5-soft);}
+  .level-card .ldot.l1{background:var(--l1);} .level-card .ldot.l2{background:var(--l2);}
+  .level-card .ldot.l3{background:var(--l3);} .level-card .ldot.l4{background:var(--l4);}
+  .level-card .ldot.l5{background:var(--l5);}
+  .level-grid > *:nth-child(5){grid-column:1 / -1;}
+
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;}
+  .switch{position:relative;width:42px;height:24px;flex:none;}
+  .switch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;}
+  .switch .track{position:absolute;inset:0;background:var(--border);border-radius:999px;transition:background .15s;}
+  .switch .knob{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--surface);box-shadow:0 1px 3px var(--shadow);transition:transform .15s;}
+  .switch input:checked + .track{background:var(--accent);}
+  .switch input:checked + .track .knob{transform:translateX(18px);}
+  .switch input:focus-visible + .track{outline:2px solid var(--accent);outline-offset:2px;}
+
+  textarea#customText{
+    width:100%;min-height:110px;margin-top:10px;border-radius:12px;border:1.5px solid var(--border);
+    background:var(--surface-2);color:var(--ink);font-family:'Lexend',sans-serif;font-size:.95rem;
+    padding:12px;resize:vertical;
+  }
+
+  select#longTextSelect{
+    width:100%;padding:12px;border-radius:12px;border:1.5px solid var(--border);
+    background:var(--surface-2);color:var(--ink);font-family:'Lexend',sans-serif;font-size:.9rem;
+    cursor:pointer;
+  }
+  textarea#customText:focus-visible, .level-card:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-visible{
+    outline:2px solid var(--accent);outline-offset:2px;
+  }
+
+  .row-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media (max-width:560px){.row-2{grid-template-columns:1fr;}}
+
+  .segmented{display:flex;border:1.5px solid var(--border);border-radius:12px;overflow:hidden;}
+  .segmented button{
+    flex:1;border:none;background:var(--surface-2);color:var(--ink-soft);padding:9px 6px;
+    font-family:'JetBrains Mono',monospace;font-weight:600;font-size:.82rem;cursor:pointer;
+    border-right:1px solid var(--border);
+  }
+  .segmented button:last-child{border-right:none;}
+  .segmented button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);}
+
+  input[type="range"]{width:100%;accent-color:var(--accent);height:22px;}
+  .slider-value{
+    font-family:'JetBrains Mono',monospace;font-weight:600;font-size:1.1rem;color:var(--accent);
+    font-variant-numeric:tabular-nums;
+  }
+  .slider-scale{display:flex;justify-content:space-between;font-size:.7rem;color:var(--ink-faint);margin-top:2px;}
+
+  .start-btn{
+    width:100%;margin-top:18px;padding:16px;border:none;border-radius:14px;
+    background:var(--accent);color:var(--accent-ink);font-family:'Fredoka',sans-serif;
+    font-weight:600;font-size:1.05rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;
+  }
+  .start-btn:disabled{opacity:.5;cursor:not-allowed;}
+  .start-btn:not(:disabled):hover{filter:brightness(1.06);}
+
+  /* ---- reading stage ---- */
+  #stage-screen{display:none;flex-direction:column;gap:14px;}
+  .stage-topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+  .chip{
+    font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:600;letter-spacing:.04em;
+    padding:5px 10px;border-radius:999px;display:inline-flex;align-items:center;gap:6px;
+  }
+  .chip.l1{background:var(--l1-soft);color:var(--l1);} .chip.l2{background:var(--l2-soft);color:var(--l2);}
+  .chip.l3{background:var(--l3-soft);color:var(--l3);} .chip.l4{background:var(--l4-soft);color:var(--l4);}
+  .chip.l5{background:var(--l5-soft);color:var(--l5);}
+  .stage-stats{display:flex;gap:16px;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--ink-soft);}
+  .stage-stats b{color:var(--ink);font-variant-numeric:tabular-nums;}
+
+  .countdown-row{display:flex;align-items:baseline;justify-content:center;gap:10px;}
+  .countdown-label{font-family:'JetBrains Mono',monospace;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);}
+  .countdown-display{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:2.1rem;color:var(--ink);font-variant-numeric:tabular-nums;}
+  .countdown-display.urgent{color:var(--l4);}
+  body[data-projection="1"] .countdown-display{font-size:clamp(2.2rem,6vw,4rem);}
+
+  .progress-track{height:8px;border-radius:999px;background:var(--surface-2);overflow:hidden;}
+  .progress-fill{height:100%;background:var(--accent);border-radius:999px;width:0%;transition:width .12s linear;}
+
+  .word-stage{
+    background:var(--surface);border:1px solid var(--border);border-radius:22px;
+    min-height:220px;display:flex;align-items:center;justify-content:center;text-align:center;
+    padding:24px 16px;box-shadow:0 8px 24px -12px var(--shadow);
+  }
+  .word-display{
+    font-family:'Lexend',sans-serif;font-weight:600;color:var(--ink);
+    font-size:clamp(2rem,7vw,4.5rem);line-height:1.15;word-break:break-word;
+  }
+  body[data-fontsize="p"] .word-display{font-size:clamp(1.6rem,5vw,3rem);}
+  body[data-fontsize="m"] .word-display{font-size:clamp(2rem,7vw,4.5rem);}
+  body[data-fontsize="g"] .word-display{font-size:clamp(2.4rem,9vw,6.5rem);}
+  body[data-fontsize="gg"] .word-display{font-size:clamp(2.8rem,12vw,9rem);}
+
+  .transport{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;}
+  .transport button{
+    font-family:'Fredoka',sans-serif;font-weight:600;font-size:.9rem;
+    border:1.5px solid var(--border);background:var(--surface-2);color:var(--ink);
+    border-radius:12px;padding:11px 16px;cursor:pointer;display:flex;align-items:center;gap:6px;
+  }
+  .transport button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
+  .transport button:hover{filter:brightness(1.04);}
+  .kbd-hint{text-align:center;font-size:.78rem;color:var(--ink-faint);}
+  .kbd-hint kbd{
+    font-family:'JetBrains Mono',monospace;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:5px;padding:1px 6px;font-size:.75rem;
+  }
+
+  .back-link{
+    background:none;border:none;color:var(--ink-soft);font-family:'Lexend',sans-serif;
+    font-size:.85rem;cursor:pointer;text-decoration:underline;padding:0;align-self:flex-start;
+  }
+
+  /* projection mode */
+  body[data-projection="1"] #setup-screen,
+  body[data-projection="1"] .top-controls-normal,
+  body[data-projection="1"] .kbd-hint,
+  body[data-projection="1"] header.top{display:none;}
+  body[data-projection="1"] .wrap{max-width:none;}
+  body[data-projection="1"] .word-stage{min-height:60vh;}
+  body[data-projection="1"] .word-display{font-size:clamp(3rem,14vw,11rem)!important;}
+
+  /* ---- result banner (shown on the setup screen after a reading) ---- */
+  .result-banner{
+    background:var(--accent-soft);border:1.5px solid var(--accent);border-radius:16px;
+    padding:14px 16px;margin-bottom:18px;
+  }
+  .result-banner-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .result-banner-head strong{font-family:'Fredoka',sans-serif;font-weight:600;font-size:1rem;color:var(--ink);}
+  #resultDismiss{
+    background:none;border:none;color:var(--ink-soft);font-size:1.2rem;line-height:1;
+    cursor:pointer;padding:2px 6px;border-radius:6px;
+  }
+  #resultDismiss:hover{background:rgba(0,0,0,.06);}
+  .end-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0 0;}
+  @media (max-width:520px){.end-grid{grid-template-columns:1fr;}}
+  .end-stat{background:var(--surface-2);border-radius:14px;padding:14px;}
+  .end-stat .label{font-size:.75rem;color:var(--ink-faint);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.06em;}
+  .end-stat .value{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:1.5rem;color:var(--ink);font-variant-numeric:tabular-nums;margin-top:4px;}
+
+  footer{text-align:center;color:var(--ink-faint);font-size:.78rem;padding-top:6px;}
+  [hidden]{display:none!important;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Treino de fluência</div>
+      <h1>Ritmo de Leitura</h1>
+      <p>Mostra o texto palavra por palavra (ou em pequenos grupos) numa velocidade escolhida, para os alunos lerem em voz alta no mesmo ritmo.</p>
+    </div>
+  </header>
+
+  <!-- SETUP SCREEN -->
+  <section id="setup-screen" class="card">
+    <div id="resultBanner" class="result-banner" hidden>
+      <div class="result-banner-head">
+        <strong id="resultHeading">Leitura concluída</strong>
+        <button type="button" id="resultDismiss" aria-label="Fechar resumo">×</button>
+      </div>
+      <div class="end-grid">
+        <div class="end-stat"><div class="label">Palavras lidas</div><div class="value" id="resultWords">0</div></div>
+        <div class="end-stat"><div class="label">Tempo</div><div class="value" id="resultTime">0s</div></div>
+        <div class="end-stat"><div class="label">Ritmo médio</div><div class="value" id="resultWpm">0 ppm</div></div>
+      </div>
+    </div>
+    <div class="toggle-row" style="margin-top:0;">
+      <div class="field-label" style="margin-bottom:0;">Fonte do texto<span class="hint">nível pronto ou texto próprio</span></div>
+      <label class="switch">
+        <input type="checkbox" id="customToggle" aria-label="Usar meu próprio texto">
+        <span class="track"><span class="knob"></span></span>
+      </label>
+    </div>
+
+    <div id="levelBlock" style="margin-top:12px;">
+      <div class="level-grid" id="levelGrid" role="group" aria-label="Nível de dificuldade"></div>
+      <div id="longTextPicker" hidden style="margin-top:12px;">
+        <div class="field-label" style="margin-bottom:8px;">Escolha o texto <span class="hint">~200 palavras cada</span></div>
+        <select id="longTextSelect" aria-label="Escolha do texto longo"></select>
+      </div>
+    </div>
+
+    <div id="customBlock" hidden style="margin-top:6px;">
+      <textarea id="customText" placeholder="Cole aqui o texto da apostila ou do livro que a turma vai ler..."></textarea>
+    </div>
+
+    <div class="row-2" style="margin-top:20px;">
+      <div>
+        <div class="field-label">Velocidade <span class="slider-value" id="wpmValue">110</span> <span class="hint">palavras/min</span></div>
+        <input type="range" id="wpmSlider" min="40" max="240" step="10" value="110" aria-label="Velocidade em palavras por minuto">
+        <div class="slider-scale"><span>Bem lento</span><span>Médio</span><span>Muito rápido</span></div>
+      </div>
+      <div>
+        <div class="field-label">Palavras por vez</div>
+        <div class="segmented" id="chunkSeg" role="group" aria-label="Quantidade de palavras exibidas por vez">
+          <button type="button" data-val="1" aria-pressed="true">1</button>
+          <button type="button" data-val="2" aria-pressed="false">2</button>
+          <button type="button" data-val="3" aria-pressed="false">3</button>
+          <button type="button" data-val="4" aria-pressed="false">4</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="row-2" style="margin-top:20px;">
+      <div>
+        <div class="field-label">Avanço</div>
+        <div class="segmented" id="modeSeg" role="group" aria-label="Modo de avanço do texto">
+          <button type="button" data-val="auto" aria-pressed="true">Automático</button>
+          <button type="button" data-val="manual" aria-pressed="false">Manual (clique/espaço)</button>
+        </div>
+      </div>
+      <div>
+        <div class="field-label">Tamanho na tela</div>
+        <div class="segmented" id="sizeSeg" role="group" aria-label="Tamanho da palavra na tela">
+          <button type="button" data-val="p" aria-pressed="false">P</button>
+          <button type="button" data-val="m" aria-pressed="true">M</button>
+          <button type="button" data-val="g" aria-pressed="false">G</button>
+          <button type="button" data-val="gg" aria-pressed="false">GG</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:20px;">
+      <div class="field-label">Duração da leitura <span class="hint">cronômetro regressivo</span></div>
+      <div class="segmented" id="durationSeg" role="group" aria-label="Duração da leitura">
+        <button type="button" data-val="60" aria-pressed="true">1 min (60s)</button>
+        <button type="button" data-val="120" aria-pressed="false">2 min (120s)</button>
+        <button type="button" data-val="180" aria-pressed="false">3 min (180s)</button>
+      </div>
+    </div>
+
+    <button class="start-btn" id="startBtn">Iniciar leitura →</button>
+  </section>
+
+  <!-- READING STAGE -->
+  <section id="stage-screen">
+    <button class="back-link top-controls-normal" id="backFromStage">← Voltar às configurações</button>
+    <div class="stage-topbar">
+      <span class="chip" id="levelChip">Nível</span>
+      <div class="stage-stats">
+        <span>Trecho <b id="statPos">0/0</b></span>
+        <span>Ritmo <b id="statWpmLive">0</b> ppm</span>
+      </div>
+    </div>
+    <div class="countdown-row">
+      <span class="countdown-label">Tempo restante</span>
+      <span class="countdown-display" id="countdownDisplay">01:00</span>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+    <div class="word-stage">
+      <div class="word-display" id="wordDisplay" aria-live="polite">Pronto?</div>
+    </div>
+
+    <div class="transport">
+      <button id="btnPrev" type="button">⏮ Anterior</button>
+      <button id="btnPlayPause" type="button" class="primary">⏸ Pausar</button>
+      <button id="btnNext" type="button">Próxima ⏭</button>
+      <button id="btnRestartStage" type="button">↺ Reiniciar</button>
+      <button id="btnProjection" type="button">⛶ Modo projeção</button>
+    </div>
+    <p class="kbd-hint">Atalhos: <kbd>Espaço</kbd> pausar/avançar · <kbd>←</kbd> <kbd>→</kbd> navegar · <kbd>Esc</kbd> sair da projeção</p>
+  </section>
+
+  <footer>Ferramenta de apoio à fluência de leitura · funciona inteiramente no navegador</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var BANKS = {
+    1:{ label:"Nível 1", full:"Nível 1 · Palavras simples", sample:"casa · bola · sol · flor · gato", color:"l1",
+        text:"casa bola sol mar pão flor gato cão rio luz mão pé dia voz paz chão som céu sal vento fogo água terra lua ave mesa porta livro lápis jogo festa praia chuva nuvem fruta pipa bolo doce riso canto salto pulo corda bala suco leite queijo arroz feijão pato urso lobo tigre zebra rato sapo coelho galo vaca porco ovelha abelha formiga aranha estrela monte vale praça rua ponte barco trem carro roda balde pedra folha raiz semente campo ninho pena asa bico rabo pelo mato areia onda peixe jacaré tucano macaco cobra lagarto" },
+    2:{ label:"Nível 2", full:"Nível 2 · Palavras compostas", sample:"bicicleta · elefante · floresta", color:"l2",
+        text:"bicicleta borboleta elefante dinossauro computador telefone professora biblioteca chocolate travesseiro brinquedo floresta montanha cachorro passarinho girassol quadrado triângulo caminhão refrigerante presente primavera vizinhança trabalho sorvete castelo príncipe princesa aventura coragem amizade gratidão helicóptero escorregador brincadeira felicidade curiosidade generosidade criatividade laboratório observatório microscópio construção exploração comunicação agricultura tecnologia eletricidade temperatura atmosfera gravidade reciclagem poluição arquitetura engenharia imaginação perseverança" },
+    3:{ label:"Nível 3", full:"Nível 3 · Frases curtas", sample:"“O sol brilha forte no céu.”", color:"l3",
+        text:"O sol brilha forte no céu. A menina lê um livro novo. Os pássaros cantam pela manhã. Meu cachorro corre no quintal. A professora explica a lição. Nós brincamos no parque hoje. O rio corta a cidade inteira. As flores crescem no jardim. Ele joga bola com os amigos. A chuva caiu durante a tarde. O menino desenha um dragão azul. Nossa turma visitou o museu ontem. A borboleta voou sobre as flores. Eu gosto de ler histórias antigas. O vento soprou forte pela noite. A menina pulou a corda rapidamente. O peixe nadou contra a correnteza. Meu pai lavou o carro cedo. A abelha voou até a flor. O aluno levantou a mão calado. Nós comemos pipoca no cinema. O bebê dormiu a tarde toda. A vovó contou uma história linda. O time venceu o jogo ontem. As nuvens cobriram o céu escuro. O sapo pulou dentro da lagoa. Ela guardou os brinquedos na caixa. O vento derrubou as folhas secas. Nós plantamos uma árvore no quintal. O carteiro entregou a carta hoje." },
+    4:{ label:"Nível 4", full:"Nível 4 · Frases complexas", sample:"“Durante as férias, as crianças...”", color:"l4",
+        text:"Durante as férias, as crianças brincaram na praça até o anoitecer. Quando a chuva parou, todos saíram para brincar debaixo do arco-íris. A professora pediu que os alunos lessem o texto em voz alta e depois desenhassem a cena. Mesmo cansada depois da aula, a menina ainda ajudou a organizar os livros da biblioteca. Muitas famílias enfrentam longos períodos de seca durante o verão. Enquanto o professor explicava a lição, os alunos anotavam as informações mais importantes no caderno. Depois de terminar a tarefa, o garoto guardou seus materiais e foi brincar no quintal com o cachorro. A turma do quinto ano organizou uma feira de ciências para apresentar os projetos aos pais. Ainda que estivesse com medo, o menino atravessou a ponte para ajudar o amigo machucado. Antes de dormir, a menina gosta de ouvir uma história contada pela avó. O grupo de amigos decidiu explorar a floresta próxima à escola durante o passeio de sábado. Embora estivesse chovendo bastante, a equipe de futebol decidiu continuar o treino no campo da escola. Depois que os alunos terminaram a prova, a professora corrigiu cada questão com muito cuidado e atenção. Como o rio estava cheio depois das chuvas, os pescadores precisaram esperar alguns dias antes de sair com os barcos. Assim que o sol nasceu sobre a savana, os animais começaram a se movimentar em busca de água e comida. Para conseguir terminar o projeto de ciências a tempo, os alunos se organizaram em grupos e dividiram as tarefas. Ainda que a viagem fosse longa e cansativa, a família aproveitou cada parada para conhecer lugares novos e interessantes. Enquanto esperava o ônibus escolar, o menino aproveitava para revisar mentalmente a matéria que seria cobrada na prova. Mesmo sem muitos recursos, a comunidade conseguiu construir uma pequena biblioteca para que todas as crianças pudessem ler livros." }
+  };
+
+  var LEVEL5_META = { full:"Nível 5 · Textos longos (~200 palavras)", sample:"5 textos completos para leitura", color:"l5" };
+
+  var LONG_TEXTS = [
+    { title:"A Lenda do Guaraná",
+      text:"Há muito tempo, em uma aldeia às margens de um grande rio, vivia um menino muito querido por toda a tribo. Ele era alegre, ajudava os mais velhos e sempre tinha um sorriso para os amigos. Certo dia, uma cobra venenosa apareceu escondida entre as folhas e picou o menino, que morreu pouco depois. A tristeza tomou conta da aldeia inteira, e todos choraram por muitos dias, pois haviam perdido alguém muito especial. Uma noite, o deus Tupã apareceu em sonho para a mãe do menino e disse que ela deveria plantar os olhos do filho na terra fértil da floresta. A mulher fez exatamente o que Tupã pedira, mesmo sem entender o motivo daquele pedido tão estranho. Passado algum tempo, do lugar onde os olhos foram enterrados, nasceu uma planta diferente de todas as outras que já existiam por ali. Ela tinha folhas verdes e brilhantes e, mais tarde, deu frutos pequenos e redondos, que se abriam mostrando uma semente escura parecida com um olho humano. Assim nasceu o guaraná, fruto que até hoje é usado pelos povos da Amazônia para fazer bebidas energéticas e remédios naturais. Por isso, muitas pessoas dizem que o guaraná carrega a força e a alegria daquele menino que era tão amado por toda a sua gente." },
+    { title:"A Harpia da Floresta",
+      text:"A harpia é uma das aves de rapina mais poderosas do mundo e vive nas florestas tropicais da Amazônia, incluindo áreas de Roraima. Também chamada de gavião-real, essa ave impressiona pelo tamanho: pode ultrapassar um metro de altura e suas garras são tão grandes quanto as de um urso. Apesar de parecer assustadora, a harpia tem um papel fundamental para o equilíbrio da floresta. Ela caça principalmente bichos-preguiça e macacos, controlando a quantidade desses animais e ajudando a manter o ambiente saudável. Para conseguir voar entre as árvores altas e caçar com tanta precisão, a harpia desenvolveu asas curtas e largas, perfeitas para manobras rápidas dentro da mata fechada. Seus olhos também são muito especiais: conseguem enxergar detalhes a uma distância enorme, o que facilita encontrar a próxima refeição escondida entre as folhas mais altas. As harpias constroem ninhos gigantes no topo das árvores mais altas da floresta, geralmente usando os mesmos ninhos durante vários anos seguidos. Os filhotes demoram bastante tempo para aprender a voar e caçar sozinhos, podendo ficar sob os cuidados dos pais por quase dois anos inteiros. Infelizmente, o desmatamento tem reduzido o espaço onde essas aves conseguem viver e se reproduzir em segurança. Proteger a floresta amazônica é, portanto, uma forma direta de proteger a harpia e garantir que ela continue voando livremente pelos céus da nossa região por muitas gerações." },
+    { title:"O Tesouro da Ilha",
+      text:"Marcos e Duda eram primos inseparáveis e passavam as férias na casa da avó, perto do rio. Um dia, enquanto exploravam a margem em uma canoa velha, encontraram um mapa amassado dentro de uma garrafa de vidro. O papel amarelado mostrava o desenho de uma ilha pequena, com um X marcado bem no centro do desenho. Sem pensar duas vezes, os dois remaram até a ilha, decididos a descobrir o que havia escondido ali há tanto tempo. A vegetação era densa, e o caminho até o X exigia muita atenção para não se perderem entre as árvores altas. Depois de quase uma hora caminhando, avistaram uma pedra enorme com símbolos estranhos gravados na superfície. Duda percebeu que os símbolos formavam setas apontando para baixo, na direção do solo. Cavaram com as próprias mãos, ajudados por um pedaço de madeira, até sentirem algo duro escondido sob a terra. Era uma caixa de metal enferrujada, fechada com um cadeado bem antigo. Com muito esforço, conseguiram abrir a caixa e encontraram, para a surpresa dos dois, não moedas de ouro, mas um caderno cheio de desenhos e anotações de um explorador que havia estudado a região décadas antes. As páginas traziam mapas de plantas raras e animais nunca vistos por eles. Os primos entenderam que aquele tesouro, na verdade, era ainda mais valioso: um registro precioso da natureza da própria terra onde moravam, que prometeram cuidar e proteger para sempre." },
+    { title:"A Nova Amizade",
+      text:"No primeiro dia de aula na nova escola, Larissa sentiu o estômago embrulhado de nervosismo. Ela não conhecia ninguém na sala e temia passar o recreio inteiro sozinha, sentada em algum canto do pátio. Durante a primeira atividade, a professora pediu que os alunos formassem duplas para montar um cartaz sobre animais brasileiros. Ninguém parecia querer se juntar a ela, até que um menino chamado Rafael se aproximou e perguntou se ela topava ser sua dupla. Aliviada, Larissa aceitou na hora, sem esconder um sorriso largo no rosto. Enquanto desenhavam uma arara-azul no cartaz, os dois descobriram que moravam a poucas quadras de distância um do outro e que ambos adoravam os mesmos desenhos animados. A conversa fluiu tão naturalmente que, quando o sinal do recreio tocou, nenhum dos dois quis se separar. Sentaram juntos na cantina, trocaram lanches e combinaram de andar para a escola no dia seguinte. Nas semanas que vieram, Rafael apresentou Larissa para o restante do grupo de amigos, e ela finalmente sentiu que pertencia àquele lugar. Meses depois, ao lembrar daquele primeiro dia assustador, Larissa sempre sorria pensando em como um simples convite para fazer um trabalho de escola havia se transformado em uma das amizades mais importantes da sua vida inteira. A experiência ensinou a ela que, muitas vezes, basta um gesto pequeno de gentileza para mudar completamente o rumo de uma história." },
+    { title:"O Ciclo da Água",
+      text:"A água que bebemos hoje pode ser a mesma que já formou nuvens há milhares de anos, pois ela está sempre se movendo em um processo chamado ciclo da água. Tudo começa quando o calor do sol esquenta rios, lagos e oceanos, fazendo parte dessa água evaporar e subir para o céu em forma de vapor, invisível aos nossos olhos. Lá no alto, onde o ar é mais frio, o vapor se transforma novamente em pequenas gotas, formando as nuvens que vemos durante o dia. Quando essas gotinhas se juntam e ficam pesadas demais para continuar flutuando, elas caem em forma de chuva, granizo ou até neve, dependendo da temperatura do ambiente ao redor. Parte dessa água que cai é absorvida pelo solo, alimentando plantas e formando os lençóis subterrâneos que abastecem poços e nascentes. Outra parte escorre pela superfície da terra, formando riachos que se juntam a rios maiores, até desaguar novamente nos oceanos, fechando assim o ciclo inteiro. As florestas têm um papel importante nesse processo, porque as árvores ajudam a manter a umidade do solo e liberam vapor de água pelas folhas, contribuindo para a formação de novas chuvas na região. É por isso que o desmatamento pode alterar o clima de um lugar inteiro, reduzindo as chuvas e prejudicando plantações e nascentes. Entender o ciclo da água ajuda a perceber como todos os elementos da natureza estão profundamente conectados entre si." }
+  ];
+
+  var state = {
+    level: 2,
+    usingCustom: false,
+    customText: "",
+    wpm: 110,
+    chunkSize: 1,
+    mode: "auto",
+    fontSize: "m",
+    projection: false,
+    duration: 60,
+    longTextIndex: 0
+  };
+
+  var run = { tokens:[], chunks:[], idx:0, timer:null, playing:false, startTime:null, wordsSoFar:0,
+              remainingMs:0, countdownTimerId:null, lastTickTime:null, sourceText:"", shuffleMode:"none" };
+
+  // ---------- persistence (best-effort, per-viewer convenience only) ----------
+  function loadSaved(){
+    try{
+      var raw = localStorage.getItem("ritmo-leitura-settings");
+      if(raw){
+        var saved = JSON.parse(raw);
+        Object.keys(saved).forEach(function(k){ if(k in state) state[k] = saved[k]; });
+      }
+    }catch(e){}
+  }
+  function saveSettings(){
+    try{
+      localStorage.setItem("ritmo-leitura-settings", JSON.stringify({
+        level:state.level, wpm:state.wpm, chunkSize:state.chunkSize, mode:state.mode, fontSize:state.fontSize, duration:state.duration, longTextIndex:state.longTextIndex
+      }));
+    }catch(e){}
+  }
+
+  // ---------- hot reload (keep settings when the artifact republishes) ----------
+  function boot(initialData){
+    if(initialData) Object.keys(initialData).forEach(function(k){ if(k in state) state[k] = initialData[k]; });
+    loadSaved();
+    buildLevelGrid();
+    syncControlsFromState();
+    wireEvents();
+    document.body.setAttribute("data-fontsize", state.fontSize);
+  }
+  try{
+    if(window.claude && window.claude.hot){
+      window.claude.hot.ready ? window.claude.hot.ready(boot) : boot(window.claude.hot.data);
+    } else {
+      boot();
+    }
+  }catch(e){ boot(); }
+
+  function snapshotHot(){
+    try{
+      if(window.claude && window.claude.hot && window.claude.hot.snapshot){
+        window.claude.hot.snapshot({level:state.level, wpm:state.wpm, chunkSize:state.chunkSize, mode:state.mode, fontSize:state.fontSize, duration:state.duration, longTextIndex:state.longTextIndex});
+      }
+    }catch(e){}
+  }
+
+  // ---------- build level picker ----------
+  function buildLevelGrid(){
+    var grid = document.getElementById("levelGrid");
+    grid.innerHTML = "";
+    [1,2,3,4,5].forEach(function(n){
+      var b = n === 5 ? LEVEL5_META : BANKS[n];
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "level-card " + b.color;
+      btn.setAttribute("aria-pressed", String(state.level === n));
+      btn.setAttribute("data-level", n);
+      btn.innerHTML = '<span class="lname"><span class="ldot ' + b.color + '"></span>' + b.full + '</span>' +
+                      '<span class="lsample">' + b.sample + '</span>';
+      btn.addEventListener("click", function(){
+        state.level = n;
+        Array.prototype.forEach.call(grid.children, function(c){ c.setAttribute("aria-pressed", String(Number(c.getAttribute("data-level")) === n)); });
+        updateLevelExtras();
+        saveSettings(); snapshotHot();
+      });
+      grid.appendChild(btn);
+    });
+
+    var select = document.getElementById("longTextSelect");
+    select.innerHTML = "";
+    LONG_TEXTS.forEach(function(t, i){
+      var opt = document.createElement("option");
+      opt.value = String(i);
+      opt.textContent = (i+1) + ". " + t.title;
+      select.appendChild(opt);
+    });
+    select.value = String(state.longTextIndex);
+    select.addEventListener("change", function(e){
+      state.longTextIndex = Number(e.target.value);
+      saveSettings(); snapshotHot();
+    });
+  }
+
+  function updateLevelExtras(){
+    document.getElementById("longTextPicker").hidden = !(state.level === 5 && !state.usingCustom);
+  }
+
+  function syncControlsFromState(){
+    document.getElementById("customToggle").checked = state.usingCustom;
+    document.getElementById("customBlock").hidden = !state.usingCustom;
+    document.getElementById("levelBlock").hidden = state.usingCustom;
+    document.getElementById("customText").value = state.customText;
+
+    document.getElementById("wpmSlider").value = state.wpm;
+    document.getElementById("wpmValue").textContent = state.wpm;
+
+    setSegPressed("chunkSeg", String(state.chunkSize));
+    setSegPressed("modeSeg", state.mode);
+    setSegPressed("sizeSeg", state.fontSize);
+    setSegPressed("durationSeg", String(state.duration));
+    updateLevelExtras();
+  }
+
+  function setSegPressed(segId, val){
+    var seg = document.getElementById(segId);
+    Array.prototype.forEach.call(seg.children, function(btn){
+      btn.setAttribute("aria-pressed", String(btn.getAttribute("data-val") === val));
+    });
+  }
+
+  // ---------- tokenizing / chunking ----------
+  function tokenize(text){ return text.trim().split(/\s+/).filter(Boolean); }
+  function buildChunks(tokens, size){
+    var chunks = [];
+    for(var i=0;i<tokens.length;i+=size){ chunks.push(tokens.slice(i, i+size)); }
+    return chunks;
+  }
+  function shuffleArray(arr){
+    for(var i=arr.length-1;i>0;i--){
+      var j = Math.floor(Math.random()*(i+1));
+      var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    }
+    return arr;
+  }
+  function splitSentences(text){
+    var parts = text.match(/[^.!?]+[.!?]+/g);
+    if(!parts || parts.length === 0) return [text.trim()];
+    return parts.map(function(s){ return s.trim(); }).filter(Boolean);
+  }
+  // Nível 1/2 são bancos de palavras soltas: embaralha as palavras.
+  // Nível 3/4 são bancos de frases: embaralha a ordem das frases, mas mantém cada frase intacta.
+  // Texto próprio e Nível 5 (textos longos) são lidos sempre na ordem original, para não quebrar o sentido.
+  function tokensForSource(sourceText, shuffleMode){
+    if(shuffleMode === "words"){
+      return shuffleArray(tokenize(sourceText));
+    }
+    if(shuffleMode === "sentences"){
+      var sentences = shuffleArray(splitSentences(sourceText));
+      return tokenize(sentences.join(" "));
+    }
+    return tokenize(sourceText);
+  }
+  function pauseMultiplier(chunk){
+    var last = chunk[chunk.length-1];
+    var lastChar = last.charAt(last.length-1);
+    if(".!?".indexOf(lastChar) !== -1) return 1.6;
+    if(",;:".indexOf(lastChar) !== -1) return 1.25;
+    return 1;
+  }
+  function msForChunk(chunk){
+    var base = (60000/state.wpm) * chunk.length;
+    return Math.round(base * pauseMultiplier(chunk));
+  }
+
+  // ---------- screens ----------
+  function showScreen(name){
+    document.getElementById("setup-screen").style.display = name === "setup" ? "block" : "none";
+    document.getElementById("stage-screen").style.display = name === "stage" ? "flex" : "none";
+  }
+
+  function startReading(){
+    var sourceText, chipColor, chipLabel, shuffleMode;
+    if(state.usingCustom){
+      sourceText = state.customText;
+      chipColor = "l2"; chipLabel = "Texto próprio";
+      shuffleMode = "none";
+    } else if(state.level === 5){
+      var chosen = LONG_TEXTS[state.longTextIndex];
+      sourceText = chosen.text;
+      chipColor = "l5"; chipLabel = chosen.title;
+      shuffleMode = "none";
+    } else {
+      sourceText = BANKS[state.level].text;
+      chipColor = BANKS[state.level].color; chipLabel = BANKS[state.level].full;
+      shuffleMode = (state.level === 1 || state.level === 2) ? "words" : "sentences";
+    }
+    run.sourceText = sourceText;
+    run.shuffleMode = shuffleMode;
+    run.tokens = tokensForSource(sourceText, shuffleMode);
+    if(run.tokens.length === 0) return;
+    run.chunks = buildChunks(run.tokens, state.chunkSize);
+    run.idx = 0;
+    run.startTime = Date.now();
+    run.wordsSoFar = 0;
+    run.playing = true;
+    run.remainingMs = state.duration * 1000;
+    document.getElementById("resultBanner").hidden = true;
+
+    var chip = document.getElementById("levelChip");
+    chip.className = "chip " + chipColor;
+    chip.textContent = chipLabel;
+
+    showScreen("stage");
+    updateCountdownDisplay();
+    updatePlayPauseLabel();
+    renderChunk();
+    startCountdownInterval();
+    if(state.mode === "auto") scheduleNext();
+  }
+
+  // ---------- countdown timer ----------
+  function startCountdownInterval(){
+    pauseCountdownInterval();
+    run.lastTickTime = Date.now();
+    run.countdownTimerId = setInterval(function(){
+      var now = Date.now();
+      var delta = now - run.lastTickTime;
+      run.lastTickTime = now;
+      run.remainingMs -= delta;
+      if(run.remainingMs <= 0){
+        run.remainingMs = 0;
+        updateCountdownDisplay();
+        finishReading("timeUp");
+        return;
+      }
+      updateCountdownDisplay();
+    }, 200);
+  }
+  function pauseCountdownInterval(){
+    if(run.countdownTimerId){ clearInterval(run.countdownTimerId); run.countdownTimerId = null; }
+  }
+  function updateCountdownDisplay(){
+    var el = document.getElementById("countdownDisplay");
+    var totalSec = Math.ceil(run.remainingMs / 1000);
+    var m = Math.floor(totalSec / 60), s = totalSec % 60;
+    el.textContent = (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+    el.classList.toggle("urgent", totalSec <= 10);
+  }
+  function updatePlayPauseLabel(){
+    var btn = document.getElementById("btnPlayPause");
+    var runningLabel = state.mode === "manual" ? "⏸ Pausar cronômetro" : "⏸ Pausar";
+    var pausedLabel = state.mode === "manual" ? "▶ Continuar cronômetro" : "▶ Continuar";
+    btn.textContent = run.playing ? runningLabel : pausedLabel;
+  }
+
+  function renderChunk(){
+    var el = document.getElementById("wordDisplay");
+    if(run.idx >= run.chunks.length){ return; }
+    el.textContent = run.chunks[run.idx].join(" ");
+    document.getElementById("statPos").textContent = (run.idx+1) + "/" + run.chunks.length;
+    document.getElementById("progressFill").style.width = (((run.idx+1)/run.chunks.length)*100) + "%";
+
+    var wordsThroughNow = 0;
+    for(var i=0;i<=run.idx;i++) wordsThroughNow += run.chunks[i].length;
+    run.wordsSoFar = wordsThroughNow;
+    var elapsedMin = (Date.now() - run.startTime) / 60000;
+    var liveWpm = elapsedMin > 0.02 ? Math.round(wordsThroughNow / elapsedMin) : state.wpm;
+    document.getElementById("statWpmLive").textContent = liveWpm;
+  }
+
+  function clearTimer(){ if(run.timer){ clearTimeout(run.timer); run.timer = null; } }
+
+  function scheduleNext(){
+    clearTimer();
+    if(run.idx >= run.chunks.length - 1){ run.timer = setTimeout(function(){ finishReading("completed"); }, msForChunk(run.chunks[run.idx])); return; }
+    run.timer = setTimeout(function(){
+      run.idx++;
+      renderChunk();
+      scheduleNext();
+    }, msForChunk(run.chunks[run.idx]));
+  }
+
+  function goNext(){
+    clearTimer();
+    if(run.idx >= run.chunks.length - 1){ finishReading("completed"); return; }
+    run.idx++;
+    renderChunk();
+    if(run.playing && state.mode === "auto") scheduleNext();
+  }
+  function goPrev(){
+    clearTimer();
+    run.idx = Math.max(0, run.idx - 1);
+    renderChunk();
+    if(run.playing && state.mode === "auto") scheduleNext();
+  }
+  function togglePlay(){
+    run.playing = !run.playing;
+    updatePlayPauseLabel();
+    if(run.playing){
+      startCountdownInterval();
+      if(state.mode === "auto") scheduleNext();
+    } else {
+      pauseCountdownInterval();
+      clearTimer();
+    }
+  }
+  function restartStage(){
+    clearTimer();
+    pauseCountdownInterval();
+    // gera uma nova ordem aleatória a cada reinício (quando o modo permite embaralhar)
+    run.tokens = tokensForSource(run.sourceText, run.shuffleMode);
+    run.chunks = buildChunks(run.tokens, state.chunkSize);
+    run.idx = 0;
+    run.startTime = Date.now();
+    run.remainingMs = state.duration * 1000;
+    run.playing = true;
+    updatePlayPauseLabel();
+    updateCountdownDisplay();
+    renderChunk();
+    startCountdownInterval();
+    if(state.mode === "auto") scheduleNext();
+  }
+
+  function finishReading(reason){
+    clearTimer();
+    pauseCountdownInterval();
+    var elapsedSec = reason === "timeUp"
+      ? state.duration
+      : Math.max(1, Math.round((Date.now() - run.startTime)/1000));
+    var elapsedMin = elapsedSec/60;
+    var totalWords = run.wordsSoFar;
+    var avgWpm = Math.round(totalWords/elapsedMin);
+    document.getElementById("resultHeading").textContent = reason === "timeUp" ? "Tempo esgotado! ⏱️" : "Leitura concluída! 🎉";
+    document.getElementById("resultWords").textContent = totalWords;
+    document.getElementById("resultTime").textContent = elapsedSec + "s";
+    document.getElementById("resultWpm").textContent = avgWpm + " ppm";
+    document.getElementById("resultBanner").hidden = false;
+    showScreen("setup");
+  }
+
+  // ---------- projection mode ----------
+  function toggleProjection(){
+    state.projection = !state.projection;
+    document.body.setAttribute("data-projection", state.projection ? "1" : "0");
+    try{
+      if(state.projection && document.documentElement.requestFullscreen){
+        document.documentElement.requestFullscreen().catch(function(){});
+      } else if(!state.projection && document.exitFullscreen && document.fullscreenElement){
+        document.exitFullscreen().catch(function(){});
+      }
+    }catch(e){}
+  }
+
+  // ---------- wire up ----------
+  function wireEvents(){
+    document.getElementById("customToggle").addEventListener("change", function(e){
+      state.usingCustom = e.target.checked;
+      document.getElementById("customBlock").hidden = !state.usingCustom;
+      document.getElementById("levelBlock").hidden = state.usingCustom;
+      updateLevelExtras();
+      updateStartEnabled();
+    });
+    document.getElementById("customText").addEventListener("input", function(e){
+      state.customText = e.target.value;
+      updateStartEnabled();
+    });
+
+    document.getElementById("wpmSlider").addEventListener("input", function(e){
+      state.wpm = Number(e.target.value);
+      document.getElementById("wpmValue").textContent = state.wpm;
+      saveSettings(); snapshotHot();
+    });
+
+    bindSegment("chunkSeg", function(val){ state.chunkSize = Number(val); saveSettings(); snapshotHot(); });
+    bindSegment("modeSeg", function(val){ state.mode = val; saveSettings(); snapshotHot(); });
+    bindSegment("sizeSeg", function(val){ state.fontSize = val; document.body.setAttribute("data-fontsize", val); saveSettings(); snapshotHot(); });
+    bindSegment("durationSeg", function(val){ state.duration = Number(val); saveSettings(); snapshotHot(); });
+
+    document.getElementById("startBtn").addEventListener("click", startReading);
+    document.getElementById("backFromStage").addEventListener("click", function(){ clearTimer(); showScreen("setup"); });
+    document.getElementById("btnPrev").addEventListener("click", goPrev);
+    document.getElementById("btnNext").addEventListener("click", goNext);
+    document.getElementById("btnPlayPause").addEventListener("click", togglePlay);
+    document.getElementById("btnRestartStage").addEventListener("click", restartStage);
+    document.getElementById("btnProjection").addEventListener("click", toggleProjection);
+    document.getElementById("resultDismiss").addEventListener("click", function(){ document.getElementById("resultBanner").hidden = true; });
+
+    document.addEventListener("keydown", function(e){
+      var tag = (document.activeElement && document.activeElement.tagName) || "";
+      if(tag === "TEXTAREA" || tag === "INPUT") return;
+      if(document.getElementById("stage-screen").style.display === "none") return;
+      if(e.code === "Space"){ e.preventDefault(); state.mode === "manual" ? goNext() : togglePlay(); }
+      else if(e.code === "ArrowRight"){ e.preventDefault(); goNext(); }
+      else if(e.code === "ArrowLeft"){ e.preventDefault(); goPrev(); }
+      else if(e.code === "Escape" && state.projection){ toggleProjection(); }
+    });
+
+    updateStartEnabled();
+  }
+
+  function bindSegment(segId, onChange){
+    var seg = document.getElementById(segId);
+    Array.prototype.forEach.call(seg.children, function(btn){
+      btn.addEventListener("click", function(){
+        Array.prototype.forEach.call(seg.children, function(b){ b.setAttribute("aria-pressed","false"); });
+        btn.setAttribute("aria-pressed","true");
+        onChange(btn.getAttribute("data-val"));
+      });
+    });
+  }
+
+  function updateStartEnabled(){
+    var btn = document.getElementById("startBtn");
+    btn.disabled = state.usingCustom && state.customText.trim().length === 0;
+  }
+
+  showScreen("setup");
+})();
+</script>
+</body>
+</html>
