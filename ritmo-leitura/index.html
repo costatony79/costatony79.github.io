@@ -170,6 +170,15 @@
 
   /* ---- reading stage ---- */
   #stage-screen{display:none;flex-direction:column;gap:14px;}
+  #result-screen{display:none;text-align:center;}
+  #result-screen .result-title{font-family:'Fredoka',sans-serif;font-weight:600;font-size:clamp(1.6rem,4vw,2.4rem);margin:4px 0 4px;color:var(--ink);}
+  #result-screen .result-sub{color:var(--ink-soft);margin:0 0 18px;}
+  #result-screen .end-stat{padding:20px 14px;}
+  #result-screen .end-stat .value{font-size:clamp(2rem,6vw,3.4rem);}
+  #result-screen .result-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:20px;}
+  #result-screen .result-actions button{font:inherit;font-weight:600;border-radius:12px;padding:12px 20px;cursor:pointer;border:1.5px solid var(--border);background:var(--surface);color:var(--ink);}
+  #result-screen .result-actions button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
+  .end-text-hint{text-align:center;font-weight:600;color:var(--l4);margin:0;}
   .stage-topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
   .chip{
     font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:600;letter-spacing:.04em;
@@ -335,11 +344,18 @@
     </div>
 
     <div style="margin-top:20px;">
-      <div class="field-label">Duração da leitura <span class="hint">cronômetro progressivo</span></div>
+      <div class="field-label">Duração da leitura <span class="hint">cronômetro progressivo · bipe a cada minuto</span></div>
       <div class="segmented" id="durationSeg" role="group" aria-label="Duração da leitura">
         <button type="button" data-val="60" aria-pressed="true">1 min (60s)</button>
         <button type="button" data-val="120" aria-pressed="false">2 min (120s)</button>
         <button type="button" data-val="180" aria-pressed="false">3 min (180s)</button>
+      </div>
+      <div class="toggle-row">
+        <div class="field-label" style="margin-bottom:0;">Terminar sozinho quando o tempo acabar<span class="hint" id="endModeHint">desligado: a leitura só termina no botão ⏹ Parar</span></div>
+        <label class="switch">
+          <input type="checkbox" id="autoEndToggle" aria-label="Terminar a leitura automaticamente quando o tempo acabar">
+          <span class="track"><span class="knob"></span></span>
+        </label>
       </div>
     </div>
 
@@ -365,6 +381,7 @@
 
     <div class="word-stage">
       <div class="word-display" id="wordDisplay" aria-live="polite">Pronto?</div>
+    <p class="end-text-hint" id="endTextHint" hidden>Fim do texto. Toque em ⏹ Parar para ver o resumo.</p>
     </div>
 
     <div class="transport">
@@ -376,6 +393,21 @@
       <button id="btnProjection" type="button">⛶ Modo projeção</button>
     </div>
     <p class="kbd-hint">Atalhos: <kbd>Espaço</kbd> pausar/avançar · <kbd>←</kbd> <kbd>→</kbd> navegar · <kbd>Esc</kbd> sair da projeção</p>
+  </section>
+
+  <!-- RESUMO DA LEITURA -->
+  <section id="result-screen" class="card">
+    <div class="result-title" id="summaryHeading">Leitura concluída! 🎉</div>
+    <p class="result-sub" id="summaryText">Texto</p>
+    <div class="end-grid">
+      <div class="end-stat"><div class="label">Palavras lidas</div><div class="value" id="summaryWords">0</div></div>
+      <div class="end-stat"><div class="label">Tempo de leitura</div><div class="value" id="summaryTime">00:00</div></div>
+      <div class="end-stat"><div class="label">Ritmo médio</div><div class="value" id="summaryWpm">0</div><div class="label" style="margin-top:4px">palavras por minuto</div></div>
+    </div>
+    <div class="result-actions">
+      <button type="button" class="primary" id="summaryAgain">↺ Ler de novo</button>
+      <button type="button" id="summaryBack">← Voltar às configurações</button>
+    </div>
   </section>
 
   <footer>Ferramenta de apoio à fluência de leitura · funciona inteiramente no navegador</footer>
@@ -423,6 +455,7 @@
     fontSize: "m",
     projection: false,
     duration: 60,
+    autoEnd: false,
     longTextIndex: 0
   };
 
@@ -461,7 +494,7 @@
   function saveSettings(){
     try{
       localStorage.setItem("ritmo-leitura-settings", JSON.stringify({
-        level:state.level, wpm:state.wpm, chunkSize:state.chunkSize, mode:state.mode, fontSize:state.fontSize, duration:state.duration, longTextIndex:state.longTextIndex
+        level:state.level, wpm:state.wpm, chunkSize:state.chunkSize, mode:state.mode, fontSize:state.fontSize, duration:state.duration, autoEnd:state.autoEnd, longTextIndex:state.longTextIndex
       }));
     }catch(e){}
   }
@@ -486,7 +519,7 @@
   function snapshotHot(){
     try{
       if(window.claude && window.claude.hot && window.claude.hot.snapshot){
-        window.claude.hot.snapshot({level:state.level, wpm:state.wpm, chunkSize:state.chunkSize, mode:state.mode, fontSize:state.fontSize, duration:state.duration, longTextIndex:state.longTextIndex});
+        window.claude.hot.snapshot({level:state.level, wpm:state.wpm, chunkSize:state.chunkSize, mode:state.mode, fontSize:state.fontSize, duration:state.duration, autoEnd:state.autoEnd, longTextIndex:state.longTextIndex});
       }
     }catch(e){}
   }
@@ -545,6 +578,8 @@
     setSegPressed("modeSeg", state.mode);
     setSegPressed("sizeSeg", state.fontSize);
     setSegPressed("durationSeg", String(state.duration));
+    document.getElementById("autoEndToggle").checked = !!state.autoEnd;
+    updateEndModeHint();
     updateLevelExtras();
   }
 
@@ -603,6 +638,8 @@
   function showScreen(name){
     document.getElementById("setup-screen").style.display = name === "setup" ? "block" : "none";
     document.getElementById("stage-screen").style.display = name === "stage" ? "flex" : "none";
+    document.getElementById("result-screen").style.display = name === "result" ? "block" : "none";
+    window.scrollTo(0, 0);
   }
 
   function startReading(){
@@ -633,6 +670,7 @@
     run.elapsedMs = 0;
     run.lastMinuteBeeped = 0;
     document.getElementById("resultBanner").hidden = true;
+    document.getElementById("endTextHint").hidden = true;
 
     var chip = document.getElementById("levelChip");
     chip.className = "chip " + chipColor;
@@ -658,12 +696,12 @@
 
       var durationMs = state.duration * 1000;
       var minuteMark = Math.floor(run.elapsedMs / 60000);
-      if(minuteMark > run.lastMinuteBeeped && minuteMark >= 1 && run.elapsedMs < durationMs){
+      if(minuteMark > run.lastMinuteBeeped && minuteMark >= 1 && (!state.autoEnd || run.elapsedMs < durationMs)){
         run.lastMinuteBeeped = minuteMark;
         playBeep();
       }
 
-      if(run.elapsedMs >= durationMs){
+      if(state.autoEnd && run.elapsedMs >= durationMs){
         run.elapsedMs = durationMs;
         updateCountdownDisplay();
         finishReading("timeUp");
@@ -681,7 +719,7 @@
     var m = Math.floor(totalSec / 60), s = totalSec % 60;
     el.textContent = (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
     var remainingSec = Math.ceil((state.duration * 1000 - run.elapsedMs) / 1000);
-    el.classList.toggle("urgent", remainingSec <= 10 && remainingSec > 0);
+    el.classList.toggle("urgent", state.autoEnd && remainingSec <= 10 && remainingSec > 0);
   }
   function updatePlayPauseLabel(){
     var btn = document.getElementById("btnPlayPause");
@@ -710,7 +748,7 @@
 
   function scheduleNext(){
     clearTimer();
-    if(run.idx >= run.chunks.length - 1){ run.timer = setTimeout(function(){ finishReading("completed"); }, msForChunk(run.chunks[run.idx])); return; }
+    if(run.idx >= run.chunks.length - 1){ run.timer = setTimeout(function(){ endOfText(); }, msForChunk(run.chunks[run.idx])); return; }
     run.timer = setTimeout(function(){
       run.idx++;
       renderChunk();
@@ -720,13 +758,14 @@
 
   function goNext(){
     clearTimer();
-    if(run.idx >= run.chunks.length - 1){ finishReading("completed"); return; }
+    if(run.idx >= run.chunks.length - 1){ endOfText(); return; }
     run.idx++;
     renderChunk();
     if(run.playing && state.mode === "auto") scheduleNext();
   }
   function goPrev(){
     clearTimer();
+    document.getElementById("endTextHint").hidden = true;
     run.idx = Math.max(0, run.idx - 1);
     renderChunk();
     if(run.playing && state.mode === "auto") scheduleNext();
@@ -744,6 +783,7 @@
   }
   function restartStage(){
     clearTimer();
+    document.getElementById("endTextHint").hidden = true;
     pauseCountdownInterval();
     // gera uma nova ordem aleatória a cada reinício (quando o modo permite embaralhar)
     run.tokens = tokensForSource(run.sourceText, run.shuffleMode);
@@ -758,6 +798,18 @@
     renderChunk();
     startCountdownInterval();
     if(state.mode === "auto") scheduleNext();
+  }
+
+  function endOfText(){
+    if(state.autoEnd){ finishReading("completed"); return; }
+    clearTimer();
+    document.getElementById("endTextHint").hidden = false;
+  }
+
+  function updateEndModeHint(){
+    document.getElementById("endModeHint").textContent = state.autoEnd
+      ? "ligado: a leitura termina quando o tempo escolhido acabar"
+      : "desligado: a leitura só termina no botão ⏹ Parar";
   }
 
   function stopReading(){
@@ -777,15 +829,23 @@
     var avgWpm = Math.round(totalWords/elapsedMin);
     var headings = {
       timeUp: "Tempo esgotado! ⏱️",
-      stopped: "Leitura interrompida ⏹️",
+      stopped: "Fim da leitura 📖",
       completed: "Leitura concluída! 🎉"
     };
     document.getElementById("resultHeading").textContent = headings[reason] || headings.completed;
     document.getElementById("resultWords").textContent = totalWords;
-    document.getElementById("resultTime").textContent = elapsedSec + "s";
+    document.getElementById("resultTime").textContent = Math.floor(elapsedSec/60) + "min " + (elapsedSec%60) + "s";
     document.getElementById("resultWpm").textContent = avgWpm + " ppm";
     document.getElementById("resultBanner").hidden = false;
-    showScreen("setup");
+    var mm = Math.floor(elapsedSec / 60), ss = elapsedSec % 60;
+    document.getElementById("summaryHeading").textContent = headings[reason] || headings.completed;
+    document.getElementById("summaryText").textContent = document.getElementById("levelChip").textContent;
+    document.getElementById("summaryWords").textContent = totalWords;
+    document.getElementById("summaryTime").textContent = (mm < 10 ? "0" + mm : mm) + ":" + (ss < 10 ? "0" + ss : ss);
+    document.getElementById("summaryWpm").textContent = avgWpm;
+    document.getElementById("endTextHint").hidden = true;
+    run.playing = false;
+    showScreen("result");
   }
 
   // ---------- projection mode ----------
@@ -832,6 +892,11 @@
     document.getElementById("btnNext").addEventListener("click", goNext);
     document.getElementById("btnPlayPause").addEventListener("click", togglePlay);
     document.getElementById("btnStop").addEventListener("click", stopReading);
+    document.getElementById("autoEndToggle").addEventListener("change", function(e){
+      state.autoEnd = e.target.checked; updateEndModeHint(); saveSettings(); snapshotHot();
+    });
+    document.getElementById("summaryAgain").addEventListener("click", function(){ showScreen("stage"); restartStage(); });
+    document.getElementById("summaryBack").addEventListener("click", function(){ showScreen("setup"); });
     document.getElementById("btnRestartStage").addEventListener("click", restartStage);
     document.getElementById("btnProjection").addEventListener("click", toggleProjection);
     document.getElementById("resultDismiss").addEventListener("click", function(){ document.getElementById("resultBanner").hidden = true; });
