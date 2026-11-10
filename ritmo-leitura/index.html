@@ -357,6 +357,13 @@
           <span class="track"><span class="knob"></span></span>
         </label>
       </div>
+      <div class="toggle-row">
+        <div class="field-label" style="margin-bottom:0;">Repetir o texto (loop)<span class="hint" id="loopHint">desligado: ao acabar, segue com novas palavras ou o próximo texto</span></div>
+        <label class="switch">
+          <input type="checkbox" id="loopToggle" aria-label="Repetir o mesmo texto do começo quando ele acabar">
+          <span class="track"><span class="knob"></span></span>
+        </label>
+      </div>
     </div>
 
     <button class="start-btn" id="startBtn">Iniciar leitura →</button>
@@ -456,6 +463,7 @@
     projection: false,
     duration: 60,
     autoEnd: false,
+    loop: false,
     longTextIndex: 0
   };
 
@@ -494,7 +502,7 @@
   function saveSettings(){
     try{
       localStorage.setItem("ritmo-leitura-settings", JSON.stringify({
-        level:state.level, wpm:state.wpm, chunkSize:state.chunkSize, mode:state.mode, fontSize:state.fontSize, duration:state.duration, autoEnd:state.autoEnd, longTextIndex:state.longTextIndex
+        level:state.level, wpm:state.wpm, chunkSize:state.chunkSize, mode:state.mode, fontSize:state.fontSize, duration:state.duration, autoEnd:state.autoEnd, loop:state.loop, longTextIndex:state.longTextIndex
       }));
     }catch(e){}
   }
@@ -519,7 +527,7 @@
   function snapshotHot(){
     try{
       if(window.claude && window.claude.hot && window.claude.hot.snapshot){
-        window.claude.hot.snapshot({level:state.level, wpm:state.wpm, chunkSize:state.chunkSize, mode:state.mode, fontSize:state.fontSize, duration:state.duration, autoEnd:state.autoEnd, longTextIndex:state.longTextIndex});
+        window.claude.hot.snapshot({level:state.level, wpm:state.wpm, chunkSize:state.chunkSize, mode:state.mode, fontSize:state.fontSize, duration:state.duration, autoEnd:state.autoEnd, loop:state.loop, longTextIndex:state.longTextIndex});
       }
     }catch(e){}
   }
@@ -579,6 +587,7 @@
     setSegPressed("sizeSeg", state.fontSize);
     setSegPressed("durationSeg", String(state.duration));
     document.getElementById("autoEndToggle").checked = !!state.autoEnd;
+    document.getElementById("loopToggle").checked = !!state.loop;
     updateEndModeHint();
     updateLevelExtras();
   }
@@ -662,6 +671,7 @@
     run.sourceText = sourceText;
     run.shuffleMode = shuffleMode;
     run.tokens = tokensForSource(sourceText, shuffleMode);
+    run.baseTokens = run.tokens.slice();
     if(run.tokens.length === 0) return;
     run.chunks = buildChunks(run.tokens, state.chunkSize);
     run.idx = 0;
@@ -788,6 +798,7 @@
     pauseCountdownInterval();
     // gera uma nova ordem aleatória a cada reinício (quando o modo permite embaralhar)
     run.tokens = tokensForSource(run.sourceText, run.shuffleMode);
+    run.baseTokens = run.tokens.slice();
     run.chunks = buildChunks(run.tokens, state.chunkSize);
     run.idx = 0;
     run.startTime = Date.now();
@@ -804,6 +815,8 @@
   // Mais palavras quando o texto acaba antes da hora: nos níveis 1 a 4, uma nova rodada
   // embaralhada do mesmo banco; no nível 5, o próximo texto longo da lista.
   function moreTokens(){
+    // Loop ligado: recomeça o mesmo texto, do começo e na mesma ordem (vale também para o texto próprio).
+    if(state.loop) return (run.baseTokens || []).slice();
     if(state.usingCustom) return null;
     if(state.level === 5){
       run.longCursor = (run.longCursor + 1) % LONG_TEXTS.length;
@@ -831,6 +844,9 @@
   }
 
   function updateEndModeHint(){
+    document.getElementById("loopHint").textContent = state.loop
+      ? "ligado: quando o texto acaba, ele recomeça do início"
+      : "desligado: ao acabar, segue com novas palavras ou o próximo texto";
     document.getElementById("endModeHint").textContent = state.autoEnd
       ? "ligado: a leitura termina quando o tempo escolhido acabar"
       : "desligado: a leitura só termina no botão ⏹ Parar";
@@ -916,6 +932,9 @@
     document.getElementById("btnNext").addEventListener("click", goNext);
     document.getElementById("btnPlayPause").addEventListener("click", togglePlay);
     document.getElementById("btnStop").addEventListener("click", stopReading);
+    document.getElementById("loopToggle").addEventListener("change", function(e){
+      state.loop = e.target.checked; updateEndModeHint(); saveSettings(); snapshotHot();
+    });
     document.getElementById("autoEndToggle").addEventListener("change", function(e){
       state.autoEnd = e.target.checked; updateEndModeHint(); saveSettings(); snapshotHot();
     });
