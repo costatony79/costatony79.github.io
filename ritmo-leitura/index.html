@@ -211,6 +211,7 @@
     border-radius:12px;padding:11px 16px;cursor:pointer;display:flex;align-items:center;gap:6px;
   }
   .transport button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
+  .transport button.danger{background:var(--l4-soft);color:var(--l4);border-color:var(--l4);}
   .transport button:hover{filter:brightness(1.04);}
   .kbd-hint{text-align:center;font-size:.78rem;color:var(--ink-faint);}
   .kbd-hint kbd{
@@ -334,7 +335,7 @@
     </div>
 
     <div style="margin-top:20px;">
-      <div class="field-label">Duração da leitura <span class="hint">cronômetro regressivo</span></div>
+      <div class="field-label">Duração da leitura <span class="hint">cronômetro progressivo</span></div>
       <div class="segmented" id="durationSeg" role="group" aria-label="Duração da leitura">
         <button type="button" data-val="60" aria-pressed="true">1 min (60s)</button>
         <button type="button" data-val="120" aria-pressed="false">2 min (120s)</button>
@@ -352,12 +353,13 @@
       <span class="chip" id="levelChip">Nível</span>
       <div class="stage-stats">
         <span>Trecho <b id="statPos">0/0</b></span>
+        <span>Palavras <b id="statWordsLive">0</b></span>
         <span>Ritmo <b id="statWpmLive">0</b> ppm</span>
       </div>
     </div>
     <div class="countdown-row">
-      <span class="countdown-label">Tempo restante</span>
-      <span class="countdown-display" id="countdownDisplay">01:00</span>
+      <span class="countdown-label">Tempo decorrido</span>
+      <span class="countdown-display" id="countdownDisplay">00:00</span>
     </div>
     <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
 
@@ -369,6 +371,7 @@
       <button id="btnPrev" type="button">⏮ Anterior</button>
       <button id="btnPlayPause" type="button" class="primary">⏸ Pausar</button>
       <button id="btnNext" type="button">Próxima ⏭</button>
+      <button id="btnStop" type="button" class="danger">⏹ Parar</button>
       <button id="btnRestartStage" type="button">↺ Reiniciar</button>
       <button id="btnProjection" type="button">⛶ Modo projeção</button>
     </div>
@@ -422,7 +425,26 @@
   };
 
   var run = { tokens:[], chunks:[], idx:0, timer:null, playing:false, startTime:null, wordsSoFar:0,
-              remainingMs:0, countdownTimerId:null, lastTickTime:null, sourceText:"", shuffleMode:"none" };
+              elapsedMs:0, lastMinuteBeeped:0, countdownTimerId:null, lastTickTime:null, sourceText:"", shuffleMode:"none" };
+
+  // ---------- audio cue (beep every full minute) ----------
+  var audioCtx = null;
+  function playBeep(){
+    try{
+      if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if(audioCtx.state === "suspended") audioCtx.resume();
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.35, audioCtx.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.4);
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.45);
+    }catch(e){}
+  }
 
   // ---------- persistence (best-effort, per-viewer convenience only) ----------
   function loadSaved(){
@@ -606,7 +628,8 @@
     run.startTime = Date.now();
     run.wordsSoFar = 0;
     run.playing = true;
-    run.remainingMs = state.duration * 1000;
+    run.elapsedMs = 0;
+    run.lastMinuteBeeped = 0;
     document.getElementById("resultBanner").hidden = true;
 
     var chip = document.getElementById("levelChip");
@@ -621,7 +644,7 @@
     if(state.mode === "auto") scheduleNext();
   }
 
-  // ---------- countdown timer ----------
+  // ---------- progressive timer (conta o tempo decorrido, para em vez de ficar regredindo) ----------
   function startCountdownInterval(){
     pauseCountdownInterval();
     run.lastTickTime = Date.now();
@@ -629,9 +652,17 @@
       var now = Date.now();
       var delta = now - run.lastTickTime;
       run.lastTickTime = now;
-      run.remainingMs -= delta;
-      if(run.remainingMs <= 0){
-        run.remainingMs = 0;
+      run.elapsedMs += delta;
+
+      var durationMs = state.duration * 1000;
+      var minuteMark = Math.floor(run.elapsedMs / 60000);
+      if(minuteMark > run.lastMinuteBeeped && minuteMark >= 1 && run.elapsedMs < durationMs){
+        run.lastMinuteBeeped = minuteMark;
+        playBeep();
+      }
+
+      if(run.elapsedMs >= durationMs){
+        run.elapsedMs = durationMs;
         updateCountdownDisplay();
         finishReading("timeUp");
         return;
@@ -644,10 +675,11 @@
   }
   function updateCountdownDisplay(){
     var el = document.getElementById("countdownDisplay");
-    var totalSec = Math.ceil(run.remainingMs / 1000);
+    var totalSec = Math.floor(run.elapsedMs / 1000);
     var m = Math.floor(totalSec / 60), s = totalSec % 60;
     el.textContent = (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
-    el.classList.toggle("urgent", totalSec <= 10);
+    var remainingSec = Math.ceil((state.duration * 1000 - run.elapsedMs) / 1000);
+    el.classList.toggle("urgent", remainingSec <= 10 && remainingSec > 0);
   }
   function updatePlayPauseLabel(){
     var btn = document.getElementById("btnPlayPause");
@@ -666,6 +698,7 @@
     var wordsThroughNow = 0;
     for(var i=0;i<=run.idx;i++) wordsThroughNow += run.chunks[i].length;
     run.wordsSoFar = wordsThroughNow;
+    document.getElementById("statWordsLive").textContent = wordsThroughNow;
     var elapsedMin = (Date.now() - run.startTime) / 60000;
     var liveWpm = elapsedMin > 0.02 ? Math.round(wordsThroughNow / elapsedMin) : state.wpm;
     document.getElementById("statWpmLive").textContent = liveWpm;
@@ -715,7 +748,8 @@
     run.chunks = buildChunks(run.tokens, state.chunkSize);
     run.idx = 0;
     run.startTime = Date.now();
-    run.remainingMs = state.duration * 1000;
+    run.elapsedMs = 0;
+    run.lastMinuteBeeped = 0;
     run.playing = true;
     updatePlayPauseLabel();
     updateCountdownDisplay();
@@ -724,16 +758,27 @@
     if(state.mode === "auto") scheduleNext();
   }
 
+  function stopReading(){
+    clearTimer();
+    pauseCountdownInterval();
+    finishReading("stopped");
+  }
+
   function finishReading(reason){
     clearTimer();
     pauseCountdownInterval();
-    var elapsedSec = reason === "timeUp"
-      ? state.duration
-      : Math.max(1, Math.round((Date.now() - run.startTime)/1000));
+    // run.elapsedMs já reflete o tempo real de leitura (conta só enquanto está tocando,
+    // então pausas não entram na conta), então usamos ele para todos os motivos.
+    var elapsedSec = Math.max(1, Math.round(run.elapsedMs/1000));
     var elapsedMin = elapsedSec/60;
     var totalWords = run.wordsSoFar;
     var avgWpm = Math.round(totalWords/elapsedMin);
-    document.getElementById("resultHeading").textContent = reason === "timeUp" ? "Tempo esgotado! ⏱️" : "Leitura concluída! 🎉";
+    var headings = {
+      timeUp: "Tempo esgotado! ⏱️",
+      stopped: "Leitura interrompida ⏹️",
+      completed: "Leitura concluída! 🎉"
+    };
+    document.getElementById("resultHeading").textContent = headings[reason] || headings.completed;
     document.getElementById("resultWords").textContent = totalWords;
     document.getElementById("resultTime").textContent = elapsedSec + "s";
     document.getElementById("resultWpm").textContent = avgWpm + " ppm";
@@ -784,6 +829,7 @@
     document.getElementById("btnPrev").addEventListener("click", goPrev);
     document.getElementById("btnNext").addEventListener("click", goNext);
     document.getElementById("btnPlayPause").addEventListener("click", togglePlay);
+    document.getElementById("btnStop").addEventListener("click", stopReading);
     document.getElementById("btnRestartStage").addEventListener("click", restartStage);
     document.getElementById("btnProjection").addEventListener("click", toggleProjection);
     document.getElementById("resultDismiss").addEventListener("click", function(){ document.getElementById("resultBanner").hidden = true; });
