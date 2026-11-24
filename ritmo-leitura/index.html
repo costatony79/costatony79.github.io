@@ -18,6 +18,7 @@
     --accent:#2B5FE0;
     --accent-ink:#FFFFFF;
     --accent-soft:#E4EBFC;
+    --l0:#0E8FA0; --l0-soft:#DDF3F6;
     --l1:#17A672; --l1-soft:#E1F6EC;
     --l2:#2B7FE0; --l2-soft:#E3EEFC;
     --l3:#C8791A; --l3-soft:#FBEEDA;
@@ -31,6 +32,7 @@
       --bg:#10121C; --surface:#191C2A; --surface-2:#212536; --border:#2E3348;
       --ink:#EEF0F8; --ink-soft:#A7ACC2; --ink-faint:#6E7390;
       --accent:#6E93FF; --accent-ink:#0B1024; --accent-soft:#223058;
+      --l0:#3FD0DE; --l0-soft:#123338;
       --l1:#33D398; --l1-soft:#163627;
       --l2:#6E93FF; --l2-soft:#1E2A4A;
       --l3:#F2B84B; --l3-soft:#3A2E17;
@@ -43,6 +45,7 @@
     --bg:#10121C; --surface:#191C2A; --surface-2:#212536; --border:#2E3348;
     --ink:#EEF0F8; --ink-soft:#A7ACC2; --ink-faint:#6E7390;
     --accent:#6E93FF; --accent-ink:#0B1024; --accent-soft:#223058;
+    --l0:#3FD0DE; --l0-soft:#123338;
     --l1:#33D398; --l1-soft:#163627;
     --l2:#6E93FF; --l2-soft:#1E2A4A;
     --l3:#F2B84B; --l3-soft:#3A2E17;
@@ -106,16 +109,16 @@
 
   .l1{--dot:var(--l1);--soft:var(--l1-soft);} .l2{--dot:var(--l2);--soft:var(--l2-soft);}
   .l3{--dot:var(--l3);--soft:var(--l3-soft);} .l4{--dot:var(--l4);--soft:var(--l4-soft);}
-  .l5{--dot:var(--l5);--soft:var(--l5-soft);}
+  .l5{--dot:var(--l5);--soft:var(--l5-soft);} .l0{--dot:var(--l0);--soft:var(--l0-soft);}
   .level-card.l1[aria-pressed="true"]{border-color:var(--l1);background:var(--l1-soft);}
   .level-card.l2[aria-pressed="true"]{border-color:var(--l2);background:var(--l2-soft);}
   .level-card.l3[aria-pressed="true"]{border-color:var(--l3);background:var(--l3-soft);}
   .level-card.l4[aria-pressed="true"]{border-color:var(--l4);background:var(--l4-soft);}
   .level-card.l5[aria-pressed="true"]{border-color:var(--l5);background:var(--l5-soft);}
+  .level-card.l0[aria-pressed="true"]{border-color:var(--l0);background:var(--l0-soft);}
   .level-card .ldot.l1{background:var(--l1);} .level-card .ldot.l2{background:var(--l2);}
   .level-card .ldot.l3{background:var(--l3);} .level-card .ldot.l4{background:var(--l4);}
-  .level-card .ldot.l5{background:var(--l5);}
-  .level-grid > *:nth-child(5){grid-column:1 / -1;}
+  .level-card .ldot.l5{background:var(--l5);} .level-card .ldot.l0{background:var(--l0);}
 
   .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;}
   .switch{position:relative;width:42px;height:24px;flex:none;}
@@ -186,7 +189,7 @@
   }
   .chip.l1{background:var(--l1-soft);color:var(--l1);} .chip.l2{background:var(--l2-soft);color:var(--l2);}
   .chip.l3{background:var(--l3-soft);color:var(--l3);} .chip.l4{background:var(--l4-soft);color:var(--l4);}
-  .chip.l5{background:var(--l5-soft);color:var(--l5);}
+  .chip.l5{background:var(--l5-soft);color:var(--l5);} .chip.l0{background:var(--l0-soft);color:var(--l0);}
   .stage-stats{display:flex;gap:16px;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--ink-soft);}
   .stage-stats b{color:var(--ink);font-variant-numeric:tabular-nums;}
 
@@ -281,7 +284,7 @@
         <button type="button" id="resultDismiss" aria-label="Fechar resumo">×</button>
       </div>
       <div class="end-grid">
-        <div class="end-stat"><div class="label">Palavras lidas</div><div class="value" id="resultWords">0</div></div>
+        <div class="end-stat"><div class="label rotuloItens">Palavras lidas</div><div class="value" id="resultWords">0</div></div>
         <div class="end-stat"><div class="label">Tempo</div><div class="value" id="resultTime">0s</div></div>
         <div class="end-stat"><div class="label">Ritmo médio</div><div class="value" id="resultWpm">0 ppm</div></div>
       </div>
@@ -296,6 +299,26 @@
 
     <div id="levelBlock" style="margin-top:12px;">
       <div class="level-grid" id="levelGrid" role="group" aria-label="Nível de dificuldade"></div>
+      <div id="letrasPicker" hidden style="margin-top:12px;">
+        <div class="row-2">
+          <div>
+            <div class="field-label" style="margin-bottom:8px;">O que mostrar</div>
+            <div class="segmented" id="letrasSeg" role="group" aria-label="Letras, sílabas ou os dois">
+              <button type="button" data-val="letras" aria-pressed="false">Letras</button>
+              <button type="button" data-val="silabas" aria-pressed="true">Sílabas</button>
+              <button type="button" data-val="ambos" aria-pressed="false">Os dois</button>
+            </div>
+          </div>
+          <div>
+            <div class="field-label" style="margin-bottom:8px;">Tipo de letra</div>
+            <div class="segmented" id="caixaSeg" role="group" aria-label="Maiúsculas ou minúsculas">
+              <button type="button" data-val="maiusculas" aria-pressed="true">MAIÚSCULAS</button>
+              <button type="button" data-val="minusculas" aria-pressed="false">minúsculas</button>
+              <button type="button" data-val="misturadas" aria-pressed="false">Misturadas</button>
+            </div>
+          </div>
+        </div>
+      </div>
       <div id="longTextPicker" hidden style="margin-top:12px;">
         <div class="field-label" style="margin-bottom:8px;">Escolha o texto <span class="hint">a maioria com ~650 palavras</span></div>
         <select id="longTextSelect" aria-label="Escolha do texto longo"></select>
@@ -375,7 +398,7 @@
       <span class="chip" id="levelChip">Nível</span>
       <div class="stage-stats">
         <span>Trecho <b id="statPos">0/0</b></span>
-        <span>Palavras <b id="statWordsLive">0</b></span>
+        <span><span class="rotuloItensCurto">Palavras</span> <b id="statWordsLive">0</b></span>
         <span>Ritmo <b id="statWpmLive">0</b> ppm</span>
       </div>
     </div>
@@ -406,7 +429,7 @@
     <div class="result-title" id="summaryHeading">Leitura concluída! 🎉</div>
     <p class="result-sub" id="summaryText">Texto</p>
     <div class="end-grid">
-      <div class="end-stat"><div class="label">Palavras lidas</div><div class="value" id="summaryWords">0</div></div>
+      <div class="end-stat"><div class="label rotuloItens">Palavras lidas</div><div class="value" id="summaryWords">0</div></div>
       <div class="end-stat"><div class="label">Tempo de leitura</div><div class="value" id="summaryTime">00:00</div></div>
       <div class="end-stat"><div class="label">Ritmo médio</div><div class="value" id="summaryWpm">0</div><div class="label" style="margin-top:4px">palavras por minuto</div></div>
     </div>
@@ -434,6 +457,24 @@
         text:"Durante as férias, as crianças brincaram na praça até o anoitecer. Quando a chuva parou, todos saíram para brincar debaixo do arco-íris. A professora pediu que os alunos lessem o texto em voz alta e depois desenhassem a cena. Mesmo cansada depois da aula, a menina ainda ajudou a organizar os livros da biblioteca. Muitas famílias enfrentam longos períodos de seca durante o verão. Enquanto o professor explicava a lição, os alunos anotavam as informações mais importantes no caderno. Depois de terminar a tarefa, o garoto guardou seus materiais e foi brincar no quintal com o cachorro. A turma do quinto ano organizou uma feira de ciências para apresentar os projetos aos pais. Ainda que estivesse com medo, o menino atravessou a ponte para ajudar o amigo machucado. Antes de dormir, a menina gosta de ouvir uma história contada pela avó. O grupo de amigos decidiu explorar a floresta próxima à escola durante o passeio de sábado. Embora estivesse chovendo bastante, a equipe de futebol decidiu continuar o treino no campo da escola. Depois que os alunos terminaram a prova, a professora corrigiu cada questão com muito cuidado e atenção. Como o rio estava cheio depois das chuvas, os pescadores precisaram esperar alguns dias antes de sair com os barcos. Assim que o sol nasceu sobre a savana, os animais começaram a se movimentar em busca de água e comida. Para conseguir terminar o projeto de ciências a tempo, os alunos se organizaram em grupos e dividiram as tarefas. Ainda que a viagem fosse longa e cansativa, a família aproveitou cada parada para conhecer lugares novos e interessantes. Enquanto esperava o ônibus escolar, o menino aproveitava para revisar mentalmente a matéria que seria cobrada na prova. Mesmo sem muitos recursos, a comunidade conseguiu construir uma pequena biblioteca para que todas as crianças pudessem ler livros. Quando o sinal tocou, os alunos correram para o pátio para aproveitar o recreio. Apesar do calor intenso da tarde, as crianças continuaram jogando bola na quadra da escola. Assim que terminou de ler o livro, a menina escreveu um resumo para apresentar à turma. Embora o caminho fosse longo, os escoteiros chegaram ao acampamento antes do anoitecer. Enquanto a mãe preparava o almoço, o filho arrumava a mesa e colocava os pratos. Depois de muitas tentativas, o menino finalmente conseguiu andar de bicicleta sem rodinhas. Se todos colaborarem com a limpeza, a sala de aula ficará organizada o ano inteiro. Como estava muito frio naquela manhã, a avó preparou um chocolate quente para os netos. Durante a apresentação da peça, os pais aplaudiram cada cena com muito entusiasmo. Antes de atravessar a rua, a criança olhou para os dois lados e esperou o sinal verde. Mesmo depois de perder o primeiro jogo, o time continuou treinando com dedicação. Quando a professora apagou as luzes, os alunos observaram as estrelas desenhadas no teto da sala. Ainda que o problema parecesse difícil, a turma resolveu a questão trabalhando em equipe. Assim que as primeiras chuvas chegaram, os agricultores começaram a preparar a terra para o plantio. Para não esquecer as tarefas da semana, a menina anotou tudo em uma agenda colorida. Depois que o rio baixou, os moradores voltaram para casa e começaram a limpar a lama. Embora fosse a primeira vez no palco, o garoto recitou o poema sem esquecer nenhum verso. Enquanto os turistas fotografavam a paisagem, o guia explicava a história do Monte Roraima. Como a biblioteca recebeu livros novos, os alunos fizeram fila para escolher suas leituras. Quando o pai chegou do trabalho, encontrou a casa enfeitada para a festa de aniversário. Apesar de ser pequeno, o beija-flor bate as asas tão rápido que parece parado no ar. Depois de observar as formigas por uma hora, o menino desenhou o caminho que elas faziam. Se a turma terminar a atividade mais cedo, a professora vai contar uma história no final da aula. Durante a viagem de barco pelo rio, a família viu botos, garças e muitos peixes saltando. Assim que o juiz apitou o fim da partida, a torcida comemorou cantando nas arquibancadas. Embora a prova estivesse difícil, o aluno respirou fundo e respondeu cada questão com calma. Enquanto chovia lá fora, os irmãos montaram uma cabana com lençóis no meio da sala. Como o lanche era de todos, as crianças dividiram as frutas de maneira justa. Antes de plantar as mudas, os alunos estudaram quanto sol e água cada planta precisava. Quando a energia acabou, a família acendeu velas e passou a noite contando histórias. Mesmo morando longe da escola, a menina nunca chegava atrasada para a primeira aula. Depois que a feira terminou, os voluntários recolheram o lixo e deixaram a praça limpa. Ainda que estivesse cansado da viagem, o avô fez questão de mostrar as fotos aos netos. Para entender melhor o mapa, a turma marcou com alfinetes os lugares que já tinha visitado. Assim que o filhote de cachorro chegou, toda a família se reuniu para escolher o seu nome. Embora o computador estivesse lento, os alunos conseguiram terminar a pesquisa a tempo. Enquanto a lua cheia subia no céu, os pescadores voltavam para a margem com os barcos cheios. Como queria ajudar o planeta, a turma decidiu separar o lixo reciclável em todas as salas." }
   };
 
+  // Nível 0: letras do alfabeto e o silabário simples (consoante + vogal), sempre em ordem sorteada.
+  var LETRAS = "A B C D E F G H I J K L M N O P Q R S T U V W X Y Z".split(" ");
+  var SILABAS = (function(){
+    var v = ["A","E","I","O","U"], lista = [];
+    ["B","C","D","F","G","H","J","L","M","N","P","R","S","T","V","X","Z"].forEach(function(c){
+      v.forEach(function(x){ lista.push(c + x); });
+    });
+    ["QUA","QUE","QUI","QUO","ÇA","ÇO","ÇU"].forEach(function(x){ lista.push(x); });
+    return lista;
+  })();
+  var LEVEL0_META = { full:"Nível 0 · Letras e sílabas", sample:"A · m · BA · ce · LU", color:"l0" };
+  function textoNivel0(){
+    var itens = state.letrasModo === "letras" ? LETRAS : state.letrasModo === "ambos" ? LETRAS.concat(SILABAS) : SILABAS;
+    return itens.map(function(x){
+      var minus = state.caixa === "minusculas" || (state.caixa === "misturadas" && Math.random() < .5);
+      return minus ? x.toLowerCase() : x;
+    }).join(" ");
+  }
   var LEVEL5_META = { full:"Nível 5 · Textos longos (~650 palavras)", sample:"6 textos completos para leitura", color:"l5" };
 
   var LONG_TEXTS = [
@@ -462,6 +503,8 @@
     projection: false,
     duration: 60,
     autoEnd: false,
+    letrasModo: "silabas",
+    caixa: "maiusculas",
     loop: false,
     longTextIndex: 0
   };
@@ -501,7 +544,7 @@
   function saveSettings(){
     try{
       localStorage.setItem("ritmo-leitura-settings", JSON.stringify({
-        level:state.level, wpm:state.wpm, chunkSize:state.chunkSize, mode:state.mode, fontSize:state.fontSize, duration:state.duration, autoEnd:state.autoEnd, loop:state.loop, longTextIndex:state.longTextIndex
+        level:state.level, wpm:state.wpm, chunkSize:state.chunkSize, mode:state.mode, fontSize:state.fontSize, duration:state.duration, autoEnd:state.autoEnd, loop:state.loop, letrasModo:state.letrasModo, caixa:state.caixa, longTextIndex:state.longTextIndex
       }));
     }catch(e){}
   }
@@ -526,7 +569,7 @@
   function snapshotHot(){
     try{
       if(window.claude && window.claude.hot && window.claude.hot.snapshot){
-        window.claude.hot.snapshot({level:state.level, wpm:state.wpm, chunkSize:state.chunkSize, mode:state.mode, fontSize:state.fontSize, duration:state.duration, autoEnd:state.autoEnd, loop:state.loop, longTextIndex:state.longTextIndex});
+        window.claude.hot.snapshot({level:state.level, wpm:state.wpm, chunkSize:state.chunkSize, mode:state.mode, fontSize:state.fontSize, duration:state.duration, autoEnd:state.autoEnd, loop:state.loop, letrasModo:state.letrasModo, caixa:state.caixa, longTextIndex:state.longTextIndex});
       }
     }catch(e){}
   }
@@ -535,8 +578,8 @@
   function buildLevelGrid(){
     var grid = document.getElementById("levelGrid");
     grid.innerHTML = "";
-    [1,2,3,4,5].forEach(function(n){
-      var b = n === 5 ? LEVEL5_META : BANKS[n];
+    [0,1,2,3,4,5].forEach(function(n){
+      var b = n === 0 ? LEVEL0_META : n === 5 ? LEVEL5_META : BANKS[n];
       var btn = document.createElement("button");
       btn.type = "button";
       btn.className = "level-card " + b.color;
@@ -570,6 +613,7 @@
 
   function updateLevelExtras(){
     document.getElementById("longTextPicker").hidden = !(state.level === 5 && !state.usingCustom);
+    document.getElementById("letrasPicker").hidden = !(state.level === 0 && !state.usingCustom);
   }
 
   function syncControlsFromState(){
@@ -585,6 +629,8 @@
     setSegPressed("modeSeg", state.mode);
     setSegPressed("sizeSeg", state.fontSize);
     setSegPressed("durationSeg", String(state.duration));
+    setSegPressed("letrasSeg", state.letrasModo);
+    setSegPressed("caixaSeg", state.caixa);
     document.getElementById("autoEndToggle").checked = !!state.autoEnd;
     document.getElementById("loopToggle").checked = !!state.loop;
     updateEndModeHint();
@@ -662,6 +708,11 @@
       chipColor = "l5"; chipLabel = chosen.title;
       run.longCursor = state.longTextIndex;
       shuffleMode = "none";
+    } else if(state.level === 0){
+      sourceText = textoNivel0();
+      chipColor = "l0";
+      chipLabel = { letras:"Letras", silabas:"Sílabas simples", ambos:"Letras e sílabas" }[state.letrasModo] || "Letras e sílabas";
+      shuffleMode = "words";
     } else {
       sourceText = BANKS[state.level].text;
       chipColor = BANKS[state.level].color; chipLabel = BANKS[state.level].full;
@@ -669,6 +720,9 @@
     }
     run.sourceText = sourceText;
     run.shuffleMode = shuffleMode;
+    var nivel0 = !state.usingCustom && state.level === 0;
+    Array.prototype.forEach.call(document.querySelectorAll(".rotuloItens"), function(e){ e.textContent = nivel0 ? "Itens lidos" : "Palavras lidas"; });
+    Array.prototype.forEach.call(document.querySelectorAll(".rotuloItensCurto"), function(e){ e.textContent = nivel0 ? "Itens" : "Palavras"; });
     run.tokens = tokensForSource(sourceText, shuffleMode);
     run.baseTokens = run.tokens.slice();
     if(run.tokens.length === 0) return;
@@ -920,6 +974,8 @@
       saveSettings(); snapshotHot();
     });
 
+    bindSegment("letrasSeg", function(val){ state.letrasModo = val; saveSettings(); snapshotHot(); });
+    bindSegment("caixaSeg", function(val){ state.caixa = val; saveSettings(); snapshotHot(); });
     bindSegment("chunkSeg", function(val){ state.chunkSize = Number(val); saveSettings(); snapshotHot(); });
     bindSegment("modeSeg", function(val){ state.mode = val; saveSettings(); snapshotHot(); });
     bindSegment("sizeSeg", function(val){ state.fontSize = val; document.body.setAttribute("data-fontsize", val); saveSettings(); snapshotHot(); });
