@@ -198,14 +198,12 @@
   .incentivo{font-size:1.15rem;line-height:1.5;text-align:center;max-width:46ch;margin:0 auto 8px;}
   .incentivo.destaque{font-family:'Fredoka',sans-serif;font-weight:600;font-size:clamp(1.3rem,3vw,1.7rem);}
   .historico-desafio{margin:18px auto 0;max-width:520px;}
-  .historico-desafio .barra{display:grid;grid-template-columns:5.5em 1fr 3em;align-items:center;gap:8px;margin:4px 0;font-size:.9rem;color:var(--ink-soft);}
+  .historico-desafio .barra{display:grid;grid-template-columns:5.5em 1fr 4.5em;align-items:center;gap:8px;margin:4px 0;font-size:.9rem;color:var(--ink-soft);}
   .historico-desafio .barra span.fill{display:block;height:14px;border-radius:7px;background:var(--l3);}
   .historico-desafio .barra.atual span.fill{background:var(--l1);}
   .historico-desafio .barra b{color:var(--ink);text-align:right;}
   .contagem-desafio{font-family:'Fredoka',sans-serif;font-weight:700;color:var(--l3);}
-  body.em-desafio #btnPrev, body.em-desafio #btnPlayPause, body.em-desafio #btnRestartStage, body.em-desafio #backFromStage{display:none;}
-  body.em-desafio .word-stage{cursor:pointer;}
-  body.em-desafio #btnNext{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-size:1.15rem;padding:14px 28px;}
+  body.em-desafio #btnPrev, body.em-desafio #btnPlayPause, body.em-desafio #btnRestartStage, body.em-desafio #backFromStage, body.em-desafio #btnNext{display:none;}
   #result-screen .result-title{font-family:'Fredoka',sans-serif;font-weight:600;font-size:clamp(1.6rem,4vw,2.4rem);margin:4px 0 4px;color:var(--ink);}
   #result-screen .result-sub{color:var(--ink-soft);margin:0 0 18px;}
   #result-screen .end-stat{padding:20px 14px;}
@@ -427,7 +425,7 @@
   <!-- MODO DESAFIO: nome e nível -->
   <section id="challenge-screen" class="card">
     <div class="desafio-titulo">🏆 Modo desafio</div>
-    <p class="desafio-sub">1 minuto para ler o máximo que você conseguir.</p>
+    <p class="desafio-sub">1 minuto lendo em voz alta, acompanhando as palavras na velocidade que você escolher.</p>
     <div class="field-label">Seu nome</div>
     <input id="desafioNome" maxlength="40" autocomplete="off" placeholder="Escreva o seu nome">
     <div class="field-label" style="margin-top:18px;">Escolha o nível</div>
@@ -440,6 +438,9 @@
       </select>
       <select id="desafioTexto" aria-label="Texto longo" hidden></select>
     </div>
+    <div class="field-label" style="margin-top:18px;">Velocidade <span class="slider-value" id="desafioWpmValor">80</span> <span class="hint">palavras por minuto</span></div>
+    <input type="range" id="desafioWpm" min="40" max="150" step="10" value="80" aria-label="Velocidade do desafio em palavras por minuto">
+    <div class="slider-scale"><span>40 · devagar</span><span>150 · bem rápido</span></div>
     <p class="desafio-recorde" id="desafioRecorde"></p>
     <div class="desafio-acoes">
       <button type="button" class="primary" id="comecarDesafio" disabled>Começar o desafio</button>
@@ -452,7 +453,7 @@
     <div class="pergunta-emoji" id="perguntaEmoji">🤔</div>
     <div class="pergunta" id="perguntaTexto"></div>
     <div class="desafio-acoes">
-      <button type="button" class="primary" id="perguntaSim">Sim, quero tentar de novo! 💪</button>
+      <button type="button" class="primary" id="perguntaSim">Sim, quero tentar! 💪</button>
       <button type="button" id="perguntaVer">Ver o meu resultado</button>
     </div>
   </section>
@@ -466,7 +467,8 @@
     <p class="incentivo" id="incentivo2"></p>
     <div class="historico-desafio" id="historicoDesafio"></div>
     <div class="desafio-acoes">
-      <button type="button" class="primary" id="resultadoDeNovo">↺ Tentar de novo</button>
+      <button type="button" class="primary" id="resultadoMaisRapido">🚀 Tentar mais rápido</button>
+      <button type="button" id="resultadoDeNovo">↺ Tentar de novo</button>
       <button type="button" id="resultadoNivel">Mudar nome ou nível</button>
       <button type="button" id="resultadoSair">Sair do desafio</button>
     </div>
@@ -905,7 +907,7 @@
   }
 
   function goNext(){
-    if(run.desafio && (run.contagem || !run.playing)) return;
+    if(run.desafio) return;
     clearTimer();
     if(run.idx >= run.chunks.length - 1){ endOfText(); return; }
     run.idx++;
@@ -920,6 +922,7 @@
     if(run.playing && state.mode === "auto") scheduleNext();
   }
   function togglePlay(){
+    if(run.desafio) return;
     run.playing = !run.playing;
     updatePlayPauseLabel();
     if(run.playing){
@@ -1032,7 +1035,8 @@
   }
 
   // ---------- MODO DESAFIO ----------
-  var desafio = { nome:"", level:1, letras:"silabas", texto:0, salvo:null };
+  var desafio = { nome:"", level:1, letras:"silabas", texto:0, wpm:80, salvo:null };
+  var DESAFIO_MIN = 40, DESAFIO_MAX = 150;
   var CHAVE_DESAFIO = "ritmo-leitura-desafio";
   function lerRecordes(){ try{ return JSON.parse(localStorage.getItem(CHAVE_DESAFIO)) || {}; }catch(e){ return {}; } }
   function gravarRecordes(r){ try{ localStorage.setItem(CHAVE_DESAFIO, JSON.stringify(r)); }catch(e){} }
@@ -1040,6 +1044,11 @@
   function tentativas(){
     var r = lerRecordes(), pessoa = r[desafio.nome.trim().toLowerCase()] || {};
     return pessoa[chaveNivel()] || [];
+  }
+  // velocidade de cada tentativa (tentativas antigas sem velocidade não contam para o recorde)
+  function melhorVelocidade(lista){
+    var v = lista.map(function(x){ return x.v || 0; }).filter(Boolean);
+    return v.length ? Math.max.apply(null, v) : null;
   }
   function unidade(n){
     var u = desafio.level === 0 ? ({ letras:["letra","letras"], silabas:["sílaba","sílabas"], ambos:["item","itens"] }[desafio.letras]) : ["palavra","palavras"];
@@ -1075,6 +1084,8 @@
     LONG_TEXTS.forEach(function(t, i){ var o = document.createElement("option"); o.value = i; o.textContent = t.title; sel.appendChild(o); });
     sel.value = String(desafio.texto);
     document.getElementById("desafioLetras").value = desafio.letras;
+    document.getElementById("desafioWpm").value = desafio.wpm;
+    document.getElementById("desafioWpmValor").textContent = desafio.wpm;
     atualizarTelaDesafio();
   }
   function atualizarTelaDesafio(){
@@ -1085,37 +1096,37 @@
     document.getElementById("comecarDesafio").disabled = nome.length === 0;
     var rec = document.getElementById("desafioRecorde");
     if(!nome){ rec.textContent = ""; return; }
-    var t = tentativas();
-    if(!t.length){ rec.textContent = "Primeira vez neste nível. Boa leitura, " + primeiroNome() + "!"; return; }
-    var melhor = Math.max.apply(null, t.map(function(x){ return x.n; }));
+    var t = tentativas(), melhor = melhorVelocidade(t);
+    if(!t.length || melhor === null){ rec.textContent = "Primeira vez neste nível. Boa leitura, " + primeiroNome() + "!"; return; }
     rec.innerHTML = "";
     rec.appendChild(document.createTextNode("Seu recorde neste nível: "));
-    var b = document.createElement("b"); b.textContent = melhor + " " + unidade(melhor); rec.appendChild(b);
+    var b = document.createElement("b"); b.textContent = melhor + " palavras por minuto"; rec.appendChild(b);
     rec.appendChild(document.createTextNode(" · " + t.length + (t.length === 1 ? " tentativa" : " tentativas")));
   }
 
   function abrirDesafio(){
     desafio.level = state.level; desafio.letras = state.letrasModo; desafio.texto = state.longTextIndex;
+    desafio.wpm = Math.min(DESAFIO_MAX, Math.max(DESAFIO_MIN, state.wpm));
     montarTelaDesafio();
     showScreen("challenge");
     setTimeout(function(){ document.getElementById("desafioNome").focus(); }, 50);
   }
 
-  // O desafio usa sempre: 60 segundos, avanço manual (o aluno passa ao terminar de ler), uma palavra por vez.
+  // O desafio usa sempre: 60 segundos, avanço automático na velocidade escolhida (40 a 150 ppm), uma palavra por vez.
   function comecarDesafio(){
     if(!desafio.nome) return;
     if(!desafio.salvo){
       desafio.salvo = { level:state.level, letrasModo:state.letrasModo, longTextIndex:state.longTextIndex, mode:state.mode,
-                        chunkSize:state.chunkSize, duration:state.duration, autoEnd:state.autoEnd, loop:state.loop, usingCustom:state.usingCustom };
+                        chunkSize:state.chunkSize, duration:state.duration, autoEnd:state.autoEnd, loop:state.loop, usingCustom:state.usingCustom, wpm:state.wpm };
     }
     state.level = desafio.level; state.letrasModo = desafio.letras; state.longTextIndex = desafio.texto;
-    state.mode = "manual"; state.chunkSize = 1; state.duration = 60; state.autoEnd = true; state.loop = false; state.usingCustom = false;
+    state.mode = "auto"; state.wpm = desafio.wpm; state.chunkSize = 1; state.duration = 60; state.autoEnd = true; state.loop = false; state.usingCustom = false;
     run.desafio = true;
     document.body.classList.add("em-desafio");
     document.getElementById("btnStop").textContent = "✖ Desistir";
-    document.getElementById("btnNext").textContent = "Li! Próxima ⏭";
+
     document.querySelector(".countdown-label").textContent = "Tempo que falta";
-    document.querySelector(".kbd-hint").textContent = "Terminou de ler? Toque na palavra, no botão Próxima ou aperte Espaço.";
+    document.querySelector(".kbd-hint").textContent = "Leia em voz alta, acompanhando as palavras · " + desafio.wpm + " palavras por minuto";
     startReading();
     // contagem 3, 2, 1, já! antes de o tempo começar
     pauseCountdownInterval();
@@ -1132,7 +1143,7 @@
         el.classList.remove("contagem-desafio");
         run.contagem = false; run.playing = true;
         run.startTime = Date.now(); run.elapsedMs = 0;
-        renderChunk(); startCountdownInterval();
+        renderChunk(); startCountdownInterval(); scheduleNext();
       }, 600);
     })();
   }
@@ -1150,7 +1161,6 @@
     document.body.classList.remove("em-desafio");
     document.getElementById("wordDisplay").classList.remove("contagem-desafio");
     document.getElementById("btnStop").textContent = "⏹ Parar";
-    document.getElementById("btnNext").textContent = "Próxima ⏭";
     document.querySelector(".countdown-label").textContent = "Tempo decorrido";
     document.querySelector(".kbd-hint").innerHTML = "Atalhos: <kbd>Espaço</kbd> pausar/avançar · <kbd>←</kbd> <kbd>→</kbd> navegar · <kbd>Esc</kbd> sair da projeção";
     if(desafio.salvo){ Object.keys(desafio.salvo).forEach(function(k){ state[k] = desafio.salvo[k]; }); desafio.salvo = null; }
@@ -1158,56 +1168,56 @@
 
   var resultadoDesafio = null;
   function fimDoDesafio(){
-    // conta o que foi lido: as palavras já passadas (a que está na tela ainda não foi lida)
-    var n = 0;
-    for(var i = 0; i < run.idx; i++) n += run.chunks[i].length;
+    var n = run.wordsSoFar;           // palavras que passaram na tela durante o minuto
     var anteriores = tentativas();
-    var melhorAntes = anteriores.length ? Math.max.apply(null, anteriores.map(function(x){ return x.n; })) : null;
+    var melhorAntes = melhorVelocidade(anteriores);
     var r = lerRecordes(), chavePessoa = desafio.nome.trim().toLowerCase();
     r[chavePessoa] = r[chavePessoa] || {};
-    var lista = (r[chavePessoa][chaveNivel()] || []).concat([{ n:n, d:Date.now() }]).slice(-20);
+    var lista = (r[chavePessoa][chaveNivel()] || []).concat([{ n:n, v:desafio.wpm, d:Date.now() }]).slice(-20);
     r[chavePessoa][chaveNivel()] = lista;
     gravarRecordes(r);
-    resultadoDesafio = { n:n, melhorAntes:melhorAntes, tentativas:lista };
+    resultadoDesafio = { n:n, v:desafio.wpm, melhorAntes:melhorAntes, tentativas:lista };
     sairDoPalcoDesafio();
     mostrarPergunta();
   }
 
+  function proximaVelocidade(v){ return Math.min(DESAFIO_MAX, v + 10); }
   function mostrarPergunta(){
-    var n = resultadoDesafio.n, rec = resultadoDesafio.melhorAntes, nome = primeiroNome();
-    var meta = n + Math.max(2, Math.round(n * .1));
-    var alvo = rec !== null && rec > n ? rec + 1 : meta;
-    var perguntas = [
-      ["🤔", "Será que você consegue ler " + alvo + " " + unidade(alvo) + " na próxima vez, " + nome + "?"],
-      ["🚀", "Agora que você já conhece o desafio, topa tentar chegar a " + alvo + "?"],
-      ["💪", nome + ", quantas " + unidade(2) + " você acha que consegue ler se tentar mais uma vez?"],
-      ["🔥", "E se você tentasse de novo, agora com mais confiança?"],
-      ["🏃", "Será que dá para ler um pouquinho mais rápido e passar de " + n + "?"]
-    ];
-    if(rec !== null && n > rec) perguntas = [["🏆", "Novo recorde! Será que você consegue melhorar ainda mais?"], ["🚀", "Você está voando! Topa tentar chegar a " + meta + "?"]];
-    else if(rec !== null && n < rec) perguntas.push(["🎯", "Seu recorde é " + rec + ". Vamos tentar mais uma vez para chegar lá?"]);
+    var v = resultadoDesafio.v, rec = resultadoDesafio.melhorAntes, nome = primeiroNome(), prox = proximaVelocidade(v);
+    var perguntas;
+    if(v >= DESAFIO_MAX) perguntas = [
+      ["🏆", nome + ", você chegou à velocidade máxima! Consegue ler de novo sem tropeçar em nenhuma palavra?"],
+      ["🔥", "Velocidade máxima! Topa repetir para mostrar que não foi sorte?"]];
+    else perguntas = [
+      ["🚀", "Será que você consegue ler a " + prox + " palavras por minuto, " + nome + "?"],
+      ["🤔", "E se a gente aumentasse um pouquinho? Topa tentar a " + prox + " palavras por minuto?"],
+      ["💪", nome + ", você acompanhou " + v + " palavras por minuto. Vamos ver se dá para ir a " + prox + "?"],
+      ["🏃", "Será que você consegue acompanhar as palavras um pouco mais rápido?"]];
+    if(rec !== null && rec > v && v < DESAFIO_MAX) perguntas.push(["🎯", "Seu recorde é " + rec + " palavras por minuto. Vamos tentar chegar lá de novo?"]);
     var p = sortear(perguntas);
+    resultadoDesafio.convite = v >= DESAFIO_MAX ? v : (p[0] === "🎯" ? rec : prox);
     document.getElementById("perguntaEmoji").textContent = p[0];
     document.getElementById("perguntaTexto").textContent = p[1];
+    document.getElementById("perguntaSim").textContent = "Sim, quero tentar a " + resultadoDesafio.convite + "! 💪";
     showScreen("question");
     document.getElementById("perguntaSim").focus();
   }
 
   function mostrarResultadoDesafio(){
-    var n = resultadoDesafio.n, rec = resultadoDesafio.melhorAntes, nome = primeiroNome();
-    document.getElementById("resultadoTitulo").textContent = (rec === null || n >= rec) && n > 0 ? "Parabéns, " + nome + "! 🎉" : "Muito bem, " + nome + "! 👏";
-    document.getElementById("resultadoNumero").textContent = n;
-    document.getElementById("resultadoUnidade").textContent = unidade(n) + " em 1 minuto · " + nomeNivel();
+    var v = resultadoDesafio.v, n = resultadoDesafio.n, rec = resultadoDesafio.melhorAntes, nome = primeiroNome();
+    document.getElementById("resultadoTitulo").textContent = (rec === null || v >= rec) ? "Parabéns, " + nome + "! 🎉" : "Muito bem, " + nome + "! 👏";
+    document.getElementById("resultadoNumero").textContent = v;
+    document.getElementById("resultadoUnidade").textContent = "palavras por minuto · " + n + " " + unidade(n) + " lidas em 1 minuto · " + nomeNivel();
     var principal;
     if(rec === null) principal = sortear([
-      "Primeira marca registrada: " + n + " " + unidade(n) + "! Agora o desafio é superar você mesmo.",
-      "Você começou! " + n + " " + unidade(n) + " é o seu ponto de partida."]);
-    else if(n > rec) principal = sortear([
-      "Novo recorde! Você passou de " + rec + " para " + n + " " + unidade(n) + "! 🏆",
-      "Você superou a sua melhor marca em " + (n - rec) + " " + unidade(n - rec) + "! Que evolução!"]);
-    else if(n === rec) principal = "Você igualou o seu recorde de " + rec + "! Falta só um pouquinho para passar.";
-    else if(n >= rec * .9) principal = "Ficou bem pertinho do seu recorde de " + rec + "! Mais uma tentativa e você chega lá.";
-    else principal = "Seu recorde é " + rec + ". Todo leitor tem dias assim: o importante é continuar treinando.";
+      "Primeira marca registrada: " + v + " palavras por minuto! Agora o desafio é ir um pouquinho mais rápido.",
+      "Você começou! " + v + " palavras por minuto é o seu ponto de partida."]);
+    else if(v > rec) principal = sortear([
+      "Novo recorde! Você passou de " + rec + " para " + v + " palavras por minuto! 🏆",
+      "Você está lendo " + (v - rec) + " palavras por minuto mais rápido que antes! Que evolução!"]);
+    else if(v === rec) principal = "Você leu de novo na velocidade do seu recorde (" + rec + "). Firmeza! Que tal subir um pouquinho?";
+    else principal = "Seu recorde é " + rec + " palavras por minuto. Treinar em uma velocidade mais calma também ajuda a ler cada vez melhor.";
+    if(v >= DESAFIO_MAX) principal = "Você leu na velocidade máxima do desafio: " + DESAFIO_MAX + " palavras por minuto! 🏆";
     document.getElementById("incentivo1").textContent = principal;
     document.getElementById("incentivo2").textContent = sortear([
       "Cada leitura deixa você mais rápido e mais seguro.",
@@ -1217,20 +1227,22 @@
       "Quanto mais você lê, mais fácil fica.",
       "Ler bem abre as portas para aprender tudo."]);
     // últimas tentativas, para o aluno ver a evolução
-    var caixa = document.getElementById("historicoDesafio"), ult = resultadoDesafio.tentativas.slice(-6);
-    var maior = Math.max.apply(null, ult.map(function(x){ return x.n; }).concat([1]));
+    var caixa = document.getElementById("historicoDesafio"), ult = resultadoDesafio.tentativas.filter(function(x){ return x.v; }).slice(-6);
+    var maior = Math.max.apply(null, ult.map(function(x){ return x.v; }).concat([1]));
     caixa.innerHTML = ult.length > 1 ? '<div class="field-label" style="text-align:center">Suas últimas tentativas</div>' : "";
     if(ult.length > 1) ult.forEach(function(t, i){
       var linha = document.createElement("div"); linha.className = "barra" + (i === ult.length - 1 ? " atual" : "");
       var d = new Date(t.d), rot = document.createElement("span");
       rot.textContent = i === ult.length - 1 ? "Agora" : ("0" + d.getDate()).slice(-2) + "/" + ("0" + (d.getMonth() + 1)).slice(-2);
       var trilho = document.createElement("span"), fill = document.createElement("span");
-      fill.className = "fill"; fill.style.width = Math.max(3, t.n / maior * 100) + "%"; trilho.appendChild(fill);
-      var v = document.createElement("b"); v.textContent = t.n;
+      fill.className = "fill"; fill.style.width = Math.max(3, (t.v || 0) / maior * 100) + "%"; trilho.appendChild(fill);
+      var v = document.createElement("b"); v.textContent = t.v ? t.v + " ppm" : "–";
       linha.append(rot, trilho, v); caixa.appendChild(linha);
     });
     showScreen("challengeResult");
-    if(rec === null || n > rec){ [523, 659, 784, 1047].forEach(function(f, i){ setTimeout(function(){ try{ tomDesafio(f, .25); }catch(e){} }, i * 150); }); }
+    document.getElementById("resultadoMaisRapido").hidden = v >= DESAFIO_MAX;
+    document.getElementById("resultadoMaisRapido").textContent = "🚀 Tentar a " + proximaVelocidade(v) + " ppm";
+    if(rec === null || v > rec){ [523, 659, 784, 1047].forEach(function(f, i){ setTimeout(function(){ try{ tomDesafio(f, .25); }catch(e){} }, i * 150); }); }
   }
 
   // ---------- projection mode ----------
@@ -1281,12 +1293,15 @@
     document.getElementById("desafioTexto").addEventListener("change", function(e){ desafio.texto = Number(e.target.value); atualizarTelaDesafio(); });
     document.getElementById("comecarDesafio").addEventListener("click", comecarDesafio);
     document.getElementById("sairDesafio").addEventListener("click", function(){ showScreen("setup"); });
-    document.getElementById("perguntaSim").addEventListener("click", comecarDesafio);
+    document.getElementById("perguntaSim").addEventListener("click", function(){ desafio.wpm = resultadoDesafio.convite; comecarDesafio(); });
+    document.getElementById("resultadoMaisRapido").addEventListener("click", function(){ desafio.wpm = proximaVelocidade(resultadoDesafio.v); comecarDesafio(); });
     document.getElementById("perguntaVer").addEventListener("click", mostrarResultadoDesafio);
     document.getElementById("resultadoDeNovo").addEventListener("click", comecarDesafio);
     document.getElementById("resultadoNivel").addEventListener("click", function(){ montarTelaDesafio(); showScreen("challenge"); });
     document.getElementById("resultadoSair").addEventListener("click", function(){ showScreen("setup"); });
-    document.querySelector(".word-stage").addEventListener("click", function(){ if(run.desafio) goNext(); });
+    document.getElementById("desafioWpm").addEventListener("input", function(e){
+      desafio.wpm = Number(e.target.value); document.getElementById("desafioWpmValor").textContent = desafio.wpm;
+    });
     document.getElementById("backFromStage").addEventListener("click", function(){ clearTimer(); showScreen("setup"); });
     document.getElementById("btnPrev").addEventListener("click", goPrev);
     document.getElementById("btnNext").addEventListener("click", goNext);
