@@ -253,8 +253,8 @@
   .word-stage.deslizando #wordDisplay{display:none;}
   .word-stage.deslizando .faixa-janela{display:block;}
   .word-stage.deslizando{flex-direction:column;justify-content:center;padding-left:0;padding-right:0;}
-  .faixa{display:inline-flex;gap:.7em;white-space:nowrap;will-change:transform;word-break:normal;}
-  .faixa span{opacity:.38;transition:opacity .25s ease;}
+  .faixa{display:inline-flex;gap:.32em;white-space:nowrap;will-change:transform;word-break:normal;}
+  .faixa span{opacity:.38;transition:opacity .25s ease;font-size:.82em;}
   .faixa span.atual{opacity:1;}
   .faixa-marca{position:absolute;left:50%;width:3px;height:14%;min-height:10px;background:var(--accent);border-radius:2px;transform:translateX(-50%);opacity:.7;}
   .faixa-marca.cima{top:0;} .faixa-marca.baixo{bottom:0;}
@@ -937,7 +937,17 @@
   // faixa anda em linha reta, no mesmo tempo que o modo "uma de cada vez" usaria (velocidade escolhida).
   var faixa = document.getElementById("faixa"), janela = document.getElementById("faixaJanela");
   function deslizando(){ return state.exibicao === "deslizar"; }
-  function faixaReset(){ faixa.innerHTML = ""; run.anim = null; run.faixaAtual = -1; faixaSync(); }
+  function faixaReset(){ faixa.innerHTML = ""; run.anim = null; run.faixaAtual = -1; run.movendo = false; run.vel = null; faixaSync(); }
+  // Velocidade constante (px/ms) calibrada para que, na média do texto, passem exatamente as palavras
+  // por minuto escolhidas. Palavras longas levam mais tempo para cruzar o meio, como na leitura de verdade.
+  function calibrarVelocidade(){
+    var n = faixa.children.length;
+    if(n < 2) return 0.1;
+    var palavras = 0; for(var i = 0; i < run.chunks.length; i++) palavras += run.chunks[i].length;
+    var distancia = centro(n - 1) - centro(0);
+    var tempo = (palavras - run.chunks[n - 1].length) * 60000 / state.wpm;  // tempo até o último trecho chegar ao meio
+    return distancia / Math.max(1, tempo);
+  }
   function faixaSync(){
     for(var i = faixa.children.length; i < run.chunks.length; i++){
       var sp = document.createElement("span"); sp.textContent = run.chunks[i].join(" "); faixa.appendChild(sp);
@@ -949,14 +959,26 @@
     return sp.offsetLeft + sp.offsetWidth / 2;
   }
   function posAtual(){
+    if(run.movendo) return run.pos;
     var a = run.anim;
     if(!a) return centro(run.idx);
     var t = Math.min(1, Math.max(0, (performance.now() - a.t0) / a.dur));
     return a.de + (a.para - a.de) * t;
   }
   function animarPara(alvo, dur){ run.anim = { de: posAtual(), para: alvo, t0: performance.now(), dur: Math.max(1, dur) }; }
-  function congelar(){ var p = posAtual(); run.anim = { de: p, para: p, t0: performance.now(), dur: 1 }; }
+  function congelar(){ var p = posAtual(); run.movendo = false; run.anim = { de: p, para: p, t0: performance.now(), dur: 1 }; }
+  var ultimoQuadroFaixa = performance.now();
   (function quadroFaixa(){
+    var agora = performance.now(), dt = Math.min(100, agora - ultimoQuadroFaixa); ultimoQuadroFaixa = agora;
+    if(run.movendo && run.playing){
+      run.pos += run.vel * dt;
+      // conta cada trecho no instante em que o meio dele cruza o meio da tela
+      while(run.movendo && run.idx + 1 < run.chunks.length && centro(run.idx + 1) <= run.pos){ run.idx++; renderChunk(); }
+      var ultimo = faixa.children[run.chunks.length - 1];
+      if(run.movendo && run.idx >= run.chunks.length - 1 && ultimo && run.pos >= centro(run.idx) + ultimo.offsetWidth / 2 + 8){
+        run.movendo = false; run.pos = centro(run.idx); endOfText();
+      }
+    }
     if(janela.offsetParent !== null && faixa.children.length){
       faixa.style.transform = "translateX(" + (janela.clientWidth / 2 - posAtual()) + "px)";
     }
@@ -965,6 +987,11 @@
 
   function scheduleNext(){
     clearTimer();
+    if(deslizando() && state.mode === "auto"){
+      if(!run.movendo){ run.pos = posAtual(); run.anim = null; run.movendo = true; }
+      if(!run.vel) run.vel = calibrarVelocidade();
+      return;
+    }
     animarPara(centro(run.idx + 1), msForChunk(run.chunks[run.idx]));
     if(run.idx >= run.chunks.length - 1){ run.timer = setTimeout(function(){ endOfText(); }, msForChunk(run.chunks[run.idx])); return; }
     run.timer = setTimeout(function(){
@@ -980,6 +1007,7 @@
     if(run.idx >= run.chunks.length - 1){ endOfText(); return; }
     run.idx++;
     renderChunk();
+    if(run.movendo) run.pos = centro(run.idx);
     if(run.playing && state.mode === "auto") scheduleNext();
   }
   function goPrev(){
@@ -987,6 +1015,7 @@
     document.getElementById("endTextHint").hidden = true;
     run.idx = Math.max(0, run.idx - 1);
     renderChunk();
+    if(run.movendo) run.pos = centro(run.idx);
     if(run.playing && state.mode === "auto") scheduleNext();
   }
   function togglePlay(){
@@ -1050,7 +1079,7 @@
       return;
     }
     if(state.autoEnd){ finishReading("completed"); return; }
-    clearTimer();
+    clearTimer(); run.movendo = false;
     document.getElementById("endTextHint").hidden = false;
   }
 
@@ -1074,7 +1103,7 @@
   }
 
   function finishReading(reason){
-    clearTimer();
+    clearTimer(); run.movendo = false;
     pauseCountdownInterval();
     if(run.desafio){ fimDoDesafio(reason); return; }
     // run.elapsedMs já reflete o tempo real de leitura (conta só enquanto está tocando,
@@ -1199,7 +1228,7 @@
     document.querySelector(".kbd-hint").textContent = "Leia em voz alta, acompanhando as palavras · " + desafio.wpm + " palavras por minuto";
     startReading();
     // contagem 3, 2, 1, já! antes de o tempo começar (nada anda durante a contagem)
-    clearTimer();
+    clearTimer(); run.movendo = false;
     pauseCountdownInterval();
     run.playing = false; run.contagem = true;
     var el = document.getElementById("wordDisplay"), passos = ["3", "2", "1", "Já!"], i = 0;
@@ -1375,7 +1404,7 @@
     document.getElementById("desafioWpm").addEventListener("input", function(e){
       desafio.wpm = Number(e.target.value); document.getElementById("desafioWpmValor").textContent = desafio.wpm;
     });
-    document.getElementById("backFromStage").addEventListener("click", function(){ clearTimer(); showScreen("setup"); });
+    document.getElementById("backFromStage").addEventListener("click", function(){ clearTimer(); run.movendo = false; showScreen("setup"); });
     document.getElementById("btnPrev").addEventListener("click", goPrev);
     document.getElementById("btnNext").addEventListener("click", goNext);
     document.getElementById("btnPlayPause").addEventListener("click", togglePlay);
