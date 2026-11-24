@@ -246,6 +246,19 @@
   body[data-fontsize="g"] .word-display{font-size:clamp(2.4rem,9vw,6.5rem);}
   body[data-fontsize="gg"] .word-display{font-size:clamp(2.8rem,12vw,9rem);}
 
+  /* Exibição deslizando: as palavras passam da direita para a esquerda e contam ao cruzar o meio */
+  .faixa-janela{display:none;position:relative;width:100%;overflow:hidden;padding:.25em 0;
+    -webkit-mask-image:linear-gradient(to right,transparent 0,#000 18%,#000 82%,transparent 100%);
+            mask-image:linear-gradient(to right,transparent 0,#000 18%,#000 82%,transparent 100%);}
+  .word-stage.deslizando #wordDisplay{display:none;}
+  .word-stage.deslizando .faixa-janela{display:block;}
+  .word-stage.deslizando{flex-direction:column;justify-content:center;padding-left:0;padding-right:0;}
+  .faixa{display:inline-flex;gap:.7em;white-space:nowrap;will-change:transform;word-break:normal;}
+  .faixa span{opacity:.38;transition:opacity .25s ease;}
+  .faixa span.atual{opacity:1;}
+  .faixa-marca{position:absolute;left:50%;width:3px;height:14%;min-height:10px;background:var(--accent);border-radius:2px;transform:translateX(-50%);opacity:.7;}
+  .faixa-marca.cima{top:0;} .faixa-marca.baixo{bottom:0;}
+
   .transport{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;}
   .transport button{
     font-family:'Fredoka',sans-serif;font-weight:600;font-size:.9rem;
@@ -397,6 +410,14 @@
     </div>
 
     <div style="margin-top:20px;">
+      <div class="field-label">Como as palavras aparecem</div>
+      <div class="segmented" id="exibicaoSeg" role="group" aria-label="Como as palavras aparecem">
+        <button type="button" data-val="deslizar" aria-pressed="true">Deslizando (como na leitura)</button>
+        <button type="button" data-val="aparecer" aria-pressed="false">Uma de cada vez</button>
+      </div>
+    </div>
+
+    <div style="margin-top:20px;">
       <div class="field-label">Duração da leitura <span class="hint">cronômetro progressivo · bipe a cada minuto</span></div>
       <div class="segmented" id="durationSeg" role="group" aria-label="Duração da leitura">
         <button type="button" data-val="60" aria-pressed="true">1 min (60s)</button>
@@ -493,6 +514,11 @@
 
     <div class="word-stage">
       <div class="word-display" id="wordDisplay" aria-live="polite">Pronto?</div>
+      <div class="faixa-janela" id="faixaJanela" aria-hidden="true">
+        <span class="faixa-marca cima"></span>
+        <div class="faixa word-display" id="faixa"></div>
+        <span class="faixa-marca baixo"></span>
+      </div>
     <p class="end-text-hint" id="endTextHint" hidden>Fim do texto. Toque em ⏹ Parar para ver o resumo.</p>
     </div>
 
@@ -586,6 +612,7 @@
     projection: false,
     duration: 60,
     autoEnd: false,
+    exibicao: "deslizar",
     letrasModo: "silabas",
     caixa: "maiusculas",
     loop: false,
@@ -627,7 +654,7 @@
   function saveSettings(){
     try{
       localStorage.setItem("ritmo-leitura-settings", JSON.stringify({
-        level:state.level, wpm:state.wpm, chunkSize:state.chunkSize, mode:state.mode, fontSize:state.fontSize, duration:state.duration, autoEnd:state.autoEnd, loop:state.loop, letrasModo:state.letrasModo, caixa:state.caixa, longTextIndex:state.longTextIndex
+        level:state.level, wpm:state.wpm, chunkSize:state.chunkSize, mode:state.mode, fontSize:state.fontSize, duration:state.duration, autoEnd:state.autoEnd, loop:state.loop, exibicao:state.exibicao, letrasModo:state.letrasModo, caixa:state.caixa, longTextIndex:state.longTextIndex
       }));
     }catch(e){}
   }
@@ -652,7 +679,7 @@
   function snapshotHot(){
     try{
       if(window.claude && window.claude.hot && window.claude.hot.snapshot){
-        window.claude.hot.snapshot({level:state.level, wpm:state.wpm, chunkSize:state.chunkSize, mode:state.mode, fontSize:state.fontSize, duration:state.duration, autoEnd:state.autoEnd, loop:state.loop, letrasModo:state.letrasModo, caixa:state.caixa, longTextIndex:state.longTextIndex});
+        window.claude.hot.snapshot({level:state.level, wpm:state.wpm, chunkSize:state.chunkSize, mode:state.mode, fontSize:state.fontSize, duration:state.duration, autoEnd:state.autoEnd, loop:state.loop, exibicao:state.exibicao, letrasModo:state.letrasModo, caixa:state.caixa, longTextIndex:state.longTextIndex});
       }
     }catch(e){}
   }
@@ -713,6 +740,7 @@
     setSegPressed("sizeSeg", state.fontSize);
     setSegPressed("durationSeg", String(state.duration));
     setSegPressed("letrasSeg", state.letrasModo);
+    setSegPressed("exibicaoSeg", state.exibicao);
     setSegPressed("caixaSeg", state.caixa);
     document.getElementById("autoEndToggle").checked = !!state.autoEnd;
     document.getElementById("loopToggle").checked = !!state.loop;
@@ -814,6 +842,7 @@
     if(run.tokens.length === 0) return;
     run.chunks = buildChunks(run.tokens, state.chunkSize);
     run.idx = 0;
+    faixaReset();
     run.startTime = Date.now();
     run.wordsSoFar = 0;
     run.playing = true;
@@ -882,6 +911,13 @@
     var el = document.getElementById("wordDisplay");
     if(run.idx >= run.chunks.length){ return; }
     el.textContent = run.chunks[run.idx].join(" ");
+    faixaSync();
+    if(run.faixaAtual >= 0 && faixa.children[run.faixaAtual]) faixa.children[run.faixaAtual].classList.remove("atual");
+    if(faixa.children[run.idx]) faixa.children[run.idx].classList.add("atual");
+    run.faixaAtual = run.idx;
+    document.querySelector(".word-stage").classList.toggle("deslizando", deslizando() && !run.contagem);
+    // fora do automático (manual, pausa), a faixa só desliza rapidinho até o trecho atual
+    if(!(run.playing && state.mode === "auto")) animarPara(centro(run.idx), 260);
     document.getElementById("statPos").textContent = (run.idx+1) + "/" + run.chunks.length;
     document.getElementById("progressFill").style.width = (((run.idx+1)/run.chunks.length)*100) + "%";
 
@@ -896,8 +932,40 @@
 
   function clearTimer(){ if(run.timer){ clearTimeout(run.timer); run.timer = null; } }
 
+  // ---------- faixa deslizante ----------
+  // Cada trecho cruza o centro da tela no instante em que é contado; entre um trecho e o próximo a
+  // faixa anda em linha reta, no mesmo tempo que o modo "uma de cada vez" usaria (velocidade escolhida).
+  var faixa = document.getElementById("faixa"), janela = document.getElementById("faixaJanela");
+  function deslizando(){ return state.exibicao === "deslizar"; }
+  function faixaReset(){ faixa.innerHTML = ""; run.anim = null; run.faixaAtual = -1; faixaSync(); }
+  function faixaSync(){
+    for(var i = faixa.children.length; i < run.chunks.length; i++){
+      var sp = document.createElement("span"); sp.textContent = run.chunks[i].join(" "); faixa.appendChild(sp);
+    }
+  }
+  function centro(i){
+    var sp = faixa.children[i];
+    if(!sp){ var u = faixa.children[faixa.children.length - 1]; return u ? u.offsetLeft + u.offsetWidth * 1.5 : 0; }
+    return sp.offsetLeft + sp.offsetWidth / 2;
+  }
+  function posAtual(){
+    var a = run.anim;
+    if(!a) return centro(run.idx);
+    var t = Math.min(1, Math.max(0, (performance.now() - a.t0) / a.dur));
+    return a.de + (a.para - a.de) * t;
+  }
+  function animarPara(alvo, dur){ run.anim = { de: posAtual(), para: alvo, t0: performance.now(), dur: Math.max(1, dur) }; }
+  function congelar(){ var p = posAtual(); run.anim = { de: p, para: p, t0: performance.now(), dur: 1 }; }
+  (function quadroFaixa(){
+    if(janela.offsetParent !== null && faixa.children.length){
+      faixa.style.transform = "translateX(" + (janela.clientWidth / 2 - posAtual()) + "px)";
+    }
+    requestAnimationFrame(quadroFaixa);
+  })();
+
   function scheduleNext(){
     clearTimer();
+    animarPara(centro(run.idx + 1), msForChunk(run.chunks[run.idx]));
     if(run.idx >= run.chunks.length - 1){ run.timer = setTimeout(function(){ endOfText(); }, msForChunk(run.chunks[run.idx])); return; }
     run.timer = setTimeout(function(){
       run.idx++;
@@ -931,6 +999,7 @@
     } else {
       pauseCountdownInterval();
       clearTimer();
+      congelar();
     }
   }
   function restartStage(){
@@ -942,6 +1011,7 @@
     run.baseTokens = run.tokens.slice();
     run.chunks = buildChunks(run.tokens, state.chunkSize);
     run.idx = 0;
+    faixaReset();
     run.startTime = Date.now();
     run.elapsedMs = 0;
     run.lastMinuteBeeped = 0;
@@ -1128,7 +1198,8 @@
     document.querySelector(".countdown-label").textContent = "Tempo que falta";
     document.querySelector(".kbd-hint").textContent = "Leia em voz alta, acompanhando as palavras · " + desafio.wpm + " palavras por minuto";
     startReading();
-    // contagem 3, 2, 1, já! antes de o tempo começar
+    // contagem 3, 2, 1, já! antes de o tempo começar (nada anda durante a contagem)
+    clearTimer();
     pauseCountdownInterval();
     run.playing = false; run.contagem = true;
     var el = document.getElementById("wordDisplay"), passos = ["3", "2", "1", "Já!"], i = 0;
@@ -1136,12 +1207,13 @@
     (function passo(){
       if(!run.desafio) return;
       el.textContent = passos[i];
+      document.querySelector(".word-stage").classList.remove("deslizando");
       try{ tomDesafio(i < 3 ? 600 : 900, i < 3 ? .12 : .25); }catch(e){}
       i++;
       if(i < passos.length){ run.timerContagem = setTimeout(passo, 800); return; }
       run.timerContagem = setTimeout(function(){
         el.classList.remove("contagem-desafio");
-        run.contagem = false; run.playing = true;
+        run.contagem = false; run.playing = true; run.anim = null;
         run.startTime = Date.now(); run.elapsedMs = 0;
         renderChunk(); startCountdownInterval(); scheduleNext();
       }, 600);
@@ -1278,6 +1350,7 @@
       saveSettings(); snapshotHot();
     });
 
+    bindSegment("exibicaoSeg", function(val){ state.exibicao = val; saveSettings(); snapshotHot(); });
     bindSegment("letrasSeg", function(val){ state.letrasModo = val; saveSettings(); snapshotHot(); });
     bindSegment("caixaSeg", function(val){ state.caixa = val; saveSettings(); snapshotHot(); });
     bindSegment("chunkSeg", function(val){ state.chunkSize = Number(val); saveSettings(); snapshotHot(); });
